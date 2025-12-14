@@ -11,5 +11,14 @@
         <item name="colorOnSecondary">#000000</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <item name="android:windowBackground">@android:color/black</item>
+
+        <!-- Стиль для EditText -->
+        <item name="editTextStyle">@style/Widget.AppCompat.EditText</item>
+    </style>
+
+    <style name="Widget.App.EditText" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">#4CAF50</item>
+        <item name="android:textColorHint">#888888</item>
+        <item name="android:textColor">@android:color/white</item>
     </style>
 </resources>

@@ -90,33 +90,40 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun setupFakeData() {
+        val mainGoal = "Освоить гимнастику" // Главная цель
+
         subGoals = listOf(
             SubGoal(
+                id = 1,
                 name = "Стойка",
                 tasks = listOf(
-                    TaskCard("Армейские отжимания", "Контроль плеч и корпуса"),
-                    TaskCard("Стойка у стены", "30–60 секунд, ровное дыхание"),
-                    TaskCard("Выход в стойку", "Работа над балансом")
+                    TaskCard(title = "Армейские отжимания", note = "Работать над стабильностью плеч, контроль корпуса. Выполнять 3 подхода по 15 раз."),
+                    TaskCard(title ="Стойка у стены", note = "30–60 секунд, ровное дыхание. Спина прямая, ноги вместе."),
+                    TaskCard(title = "Выход в стойку", note ="Работа над балансом. Пробовать отрывать ноги от стены на 1-2 секунды.")
                 )
             ),
             SubGoal(
+                id = 2,
                 name = "Горизонт",
                 tasks = listOf(
-                    TaskCard("Тяга в упоре", "Лопатки сведены"),
-                    TaskCard("Негативы", "Контроль опускания"),
-                    TaskCard("Стойка на локтях", "Баланс и контроль")
+                    TaskCard(title = "Тяга в упоре", note ="Лопатки сведены, спина прямая. 4 подхода по 10 раз."),
+                    TaskCard(title ="Негативы", note ="Контроль опускания, медленное движение. 3 подхода по 5 раз."),
+                    TaskCard(title ="Стойка на локтях", note ="Баланс и контроль положения тела. 5 подходов по 20 секунд.")
                 )
             ),
             SubGoal(
+                id = 3,
                 name = "Планш",
                 tasks = listOf(
-                    TaskCard("Отжимания", "Сила трицепсов"),
-                    TaskCard("Стойка на руках", "Баланс")
+                    TaskCard(title ="Отжимания", note ="Сила трицепсов, полная амплитуда. 4 подхода по 12 раз."),
+                    TaskCard(title ="Стойка на руках", note ="Баланс, работа с партнером. 5 подходов по 30 секунд."),
+                    TaskCard(title ="Прогресс в планше", note ="Постепенное смещение центра тяжести. Тренировать ежедневно.")
                 )
             )
         )
 
-        bottomSheetFragment = SubGoalsBottomSheetFragment.newInstance(subGoals)
+        // Передаем главную цель и подцели
+        bottomSheetFragment = SubGoalsBottomSheetFragment.newInstance(subGoals, mainGoal)
         bottomSheetFragment.listener = this
     }
 

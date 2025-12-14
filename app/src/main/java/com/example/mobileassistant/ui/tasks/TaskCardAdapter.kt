@@ -3,15 +3,13 @@ package com.example.mobileassistant.ui.tasks
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.example.mobileassistant.databinding.ItemSubgoalCardBinding
+import com.example.mobileassistant.databinding.ItemTaskCardBinding
 import com.example.mobileassistant.domain.model.TaskCard
 
-class TaskAdapter : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
+class TaskCardAdapter : RecyclerView.Adapter<TaskCardAdapter.TaskCardViewHolder>() {
 
     private val items = mutableListOf<TaskCard>()
-
-    // Изменяем тип обработчика для передачи позиции
-    var onItemClick: ((TaskCard, Int) -> Unit)? = null
+    var onItemClick: ((TaskCard) -> Unit)? = null
 
     fun submitList(newItems: List<TaskCard>) {
         items.clear()
@@ -19,27 +17,27 @@ class TaskAdapter : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
-        val binding = ItemSubgoalCardBinding.inflate(
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskCardViewHolder {
+        val binding = ItemTaskCardBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false
         )
-        return TaskViewHolder(binding)
+        return TaskCardViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: TaskCardViewHolder, position: Int) {
         holder.bind(items[position])
 
         holder.itemView.setOnClickListener {
-            onItemClick?.invoke(items[position], position)
+            onItemClick?.invoke(items[position])
         }
     }
 
     override fun getItemCount(): Int = items.size
 
-    class TaskViewHolder(
-        private val binding: ItemSubgoalCardBinding
+    class TaskCardViewHolder(
+        private val binding: ItemTaskCardBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: TaskCard) {
