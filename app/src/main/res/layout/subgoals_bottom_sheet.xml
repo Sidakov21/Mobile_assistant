@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <!-- =============================== -->
+    <!-- ОСНОВНОЙ КОНТЕНТ ЭКРАНА -->
+    <!-- =============================== -->
+
+    <LinearLayout
+        android:id="@+id/subgoals_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- =============================== -->
+        <!-- HEADER: ЦЕЛЬ + ИКОНКИ -->
+        <!-- =============================== -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Название главной цели -->
+            <TextView
+                android:id="@+id/tv_main_goal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Горизонт"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white" />
+
+            <!-- Поиск -->
+            <ImageButton
+                android:id="@+id/btn_search"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Поиск"
+                android:src="@android:drawable/ic_menu_search"
+                app:tint="@android:color/white"
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <!-- Сортировка -->
+            <ImageButton
+                android:id="@+id/btn_sort"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Сортировка"
+                android:src="@android:drawable/ic_menu_sort_by_size"
+                app:tint="@android:color/white"
+                tools:ignore="TouchTargetSizeCheck" />
+        </LinearLayout>
+
+        <!-- =============================== -->
+        <!-- ПОДЦЕЛИ (переключатель) -->
+        <!-- =============================== -->
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/subgoals_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="8dp">
+
+                <!-- Кнопки подцелей будут добавляться динамически -->
+                <!-- Пример: "Стойка", "Закрытый горизонт" -->
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- =============================== -->
+        <!-- СПИСОК КАРТОЧЕК (ЗАДАЧИ) -->
+        <!-- =============================== -->
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/tasksRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="16dp"
+            android:overScrollMode="never"
+            android:clipToPadding="false"
+            android:paddingBottom="80dp" />
+
+    </LinearLayout>
+
+    <!-- =============================== -->
+    <!-- FAB — ДОБАВИТЬ КАРТОЧКУ -->
+    <!-- =============================== -->
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add_task"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="Добавить задачу"
+        android:src="@android:drawable/ic_input_add"
+        app:tint="@android:color/white" />
+
+    <!-- =============================== -->
+    <!-- BOTTOM NAVIGATION -->
+    <!-- =============================== -->
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@android:color/black"
+        app:menu="@menu/bottom_navigation_menu" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
