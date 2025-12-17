@@ -86,20 +86,6 @@
             </LinearLayout>
         </HorizontalScrollView>
 
-        <!-- =============================== -->
-        <!-- СПИСОК КАРТОЧЕК (ЗАДАЧИ) -->
-        <!-- =============================== -->
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/tasksRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="16dp"
-            android:overScrollMode="never"
-            android:clipToPadding="false"
-            android:paddingBottom="80dp" />
-
     </LinearLayout>
 
     <!-- =============================== -->
@@ -116,17 +102,5 @@
         android:contentDescription="Добавить задачу"
         android:src="@android:drawable/ic_input_add"
         app:tint="@android:color/white" />
-
-    <!-- =============================== -->
-    <!-- BOTTOM NAVIGATION -->
-    <!-- =============================== -->
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="@android:color/black"
-        app:menu="@menu/bottom_navigation_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

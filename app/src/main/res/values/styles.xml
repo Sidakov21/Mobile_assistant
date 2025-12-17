@@ -9,7 +9,6 @@
     </style>
 
     <style name="CustomBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
-        <item name="android:background">@drawable/bottom_sheet_background</item>
         <item name="android:layout_height">match_parent</item>
     </style>
 </resources>
