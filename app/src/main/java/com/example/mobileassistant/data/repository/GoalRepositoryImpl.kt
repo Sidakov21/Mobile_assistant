@@ -22,6 +22,11 @@ class GoalRepositoryImpl(
     private val taskDao: TaskDao
 ) : GoalRepository {
 
+    override fun observeGoals(userId: Int): Flow<List<Goal>> {
+        return goalDao.observeGoalsByUser(userId)
+            .map { goals -> goals.map { it.toDomain() } }
+    }
+
     override fun observeTasks(goalId: Int): Flow<List<Task>> {
         return taskDao.observeTasksByGoal(goalId)
             .map { tasks -> tasks.map { it.toDomain() } }

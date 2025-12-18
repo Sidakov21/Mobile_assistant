@@ -2,13 +2,12 @@ package com.example.mobileassistant.ui.subgoals
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mobileassistant.domain.model.SubGoal
 import com.example.mobileassistant.domain.model.SubGoalButtonUi
 import com.example.mobileassistant.domain.model.Task
 import com.example.mobileassistant.domain.model.TaskCardUi
 import com.example.mobileassistant.domain.model.repository.GoalRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -18,20 +17,41 @@ class SubGoalsViewModel(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SubGoalsState())
-    val state: StateFlow<SubGoalsState> = _state
+    val state: StateFlow<SubGoalsState> = _state.asStateFlow()
 
     private var currentGoalId: Int = 1
 
+    // Поток для обновления данных
+    private val refreshTrigger = MutableSharedFlow<Unit>()
+
+    init {
+        setupDataObserver()
+    }
+
+    private fun setupDataObserver() {
+        viewModelScope.launch {
+            refreshTrigger
+                .distinctUntilChanged()
+                .collect {
+                    loadSubGoals(currentGoalId)
+                }
+        }
+    }
+
     fun loadGoalData(goalId: Int) {
         currentGoalId = goalId
-        loadSubGoals(goalId)
+        triggerRefresh()
+    }
+
+    private fun triggerRefresh() {
+        viewModelScope.launch {
+            refreshTrigger.emit(Unit)
+        }
     }
 
     private fun loadSubGoals(goalId: Int) {
         viewModelScope.launch {
-            _state.update { currentState ->
-                currentState.copy(isLoading = true)
-            }
+            _state.update { it.copy(isLoading = true) }
 
             try {
                 val (subGoals, tasks) = repository.getGoalFull(goalId)
@@ -64,12 +84,12 @@ class SubGoalsViewModel(
                     TaskCardUi(
                         id = task.id,
                         title = task.title,
-                        subGoalId = task.subGoalId,
                         progress = task.progress,
                         note = task.note,
                         subGoalTitle = subGoal?.title ?: "",
                         subGoalColor = color,
-                        formattedDate = dateFormat.format(Date(task.createdAt))
+                        formattedDate = dateFormat.format(Date(task.createdAt)),
+                        subGoalId = task.subGoalId
                     )
                 }
 
@@ -78,8 +98,8 @@ class SubGoalsViewModel(
                 val goal = goals.find { it.id == goalId }
                 val goalTitle = goal?.title ?: "Цель"
 
-                _state.update { currentState ->
-                    currentState.copy(
+                _state.update {
+                    it.copy(
                         goalTitle = goalTitle,
                         subGoals = subGoalButtons,
                         allTasks = allTasks,
@@ -90,8 +110,8 @@ class SubGoalsViewModel(
                     )
                 }
             } catch (e: Exception) {
-                _state.update { currentState ->
-                    currentState.copy(
+                _state.update {
+                    it.copy(
                         isLoading = false,
                         error = e.message
                     )
@@ -118,9 +138,7 @@ class SubGoalsViewModel(
                 currentState.allTasks
             } else {
                 currentState.allTasks.filter { task ->
-                    // Ищем подцель по ID и сравниваем название
-                    val selectedSubGoal = currentState.subGoals.find { it.id == subGoalId }
-                    task.subGoalTitle == selectedSubGoal?.title
+                    task.subGoalId == subGoalId
                 }
             }
 
@@ -152,34 +170,52 @@ class SubGoalsViewModel(
     }
 
     fun showAddTaskDialog() {
-        _state.update { currentState ->
-            currentState.copy(showAddTaskDialog = true)
-        }
+        _state.update { it.copy(showAddTaskDialog = true) }
     }
 
     fun hideAddTaskDialog() {
-        _state.update { currentState ->
-            currentState.copy(showAddTaskDialog = false)
-        }
+        _state.update { it.copy(showAddTaskDialog = false) }
     }
 
     fun addTask(subGoalId: Int, title: String, note: String) {
         viewModelScope.launch {
+            _state.update { it.copy(isAddingTask = true) }
+
             try {
                 repository.addTask(subGoalId, title, note)
-                loadSubGoals(currentGoalId) // Перезагружаем данные
+                triggerRefresh() // Обновляем данные
                 hideAddTaskDialog()
-            } catch (e: Exception) {
-                _state.update { currentState ->
-                    currentState.copy(error = e.message)
+
+                // Показываем уведомление об успехе
+                _state.update { it.copy(
+                    isAddingTask = false,
+                    showSuccessMessage = "Задача '$title' добавлена"
+                ) }
+
+                // Автоматически скрываем сообщение через 2 секунды
+                viewModelScope.launch {
+                    kotlinx.coroutines.delay(2000)
+                    _state.update { it.copy(showSuccessMessage = null) }
                 }
+            } catch (e: Exception) {
+                _state.update { it.copy(
+                    isAddingTask = false,
+                    error = "Ошибка добавления задачи: ${e.message}"
+                ) }
             }
         }
     }
 
     fun clearError() {
-        _state.update { currentState ->
-            currentState.copy(error = null)
-        }
+        _state.update { it.copy(error = null) }
+    }
+
+    fun clearSuccessMessage() {
+        _state.update { it.copy(showSuccessMessage = null) }
+    }
+
+    // Метод для принудительного обновления
+    fun refreshData() {
+        triggerRefresh()
     }
 }

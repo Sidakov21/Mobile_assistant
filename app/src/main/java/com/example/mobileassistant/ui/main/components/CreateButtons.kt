@@ -21,11 +21,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.example.mobileassistant.R
+import androidx.compose.material3.CircularProgressIndicator
 
 @Composable
 fun CreateButtonsSection(
     onCreateGoalClick: () -> Unit,
     onCreateSubGoalClick: () -> Unit,
+    isCreatingGoal: Boolean = false,
+    isCreatingSubGoal: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -42,19 +45,35 @@ fun CreateButtonsSection(
             colors = ButtonDefaults.elevatedButtonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+            ),
+            enabled = !isCreatingGoal && !isCreatingSubGoal
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_target_24),
-                    contentDescription = "Создать цель",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Создать новую цель")
+            if (isCreatingGoal) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Создание...")
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_target_24),
+                        contentDescription = "Создать цель",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Создать новую цель")
+                }
             }
         }
 
@@ -65,19 +84,35 @@ fun CreateButtonsSection(
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            ),
+            enabled = !isCreatingGoal && !isCreatingSubGoal // ДОБАВЛЕНО: отключаем при создании
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_task_24),
-                    contentDescription = "Создать подцель",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Добавить подцель")
+            if (isCreatingSubGoal) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Создание...")
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_task_24),
+                        contentDescription = "Создать подцель",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Добавить подцель")
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ import androidx.compose.ui.window.Dialog
 fun AddGoalDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String?) -> Unit,
+    isCreating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var title by remember { mutableStateOf("") }
@@ -47,7 +48,8 @@ fun AddGoalDialog(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    enabled = !isCreating
                 )
 
                 OutlinedTextField(
@@ -57,7 +59,8 @@ fun AddGoalDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp),
-                    maxLines = 3
+                    maxLines = 3,
+                    enabled = !isCreating
                 )
 
                 Row(
@@ -65,7 +68,10 @@ fun AddGoalDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !isCreating
+                    ) {
                         Text("Отмена")
                     }
 
@@ -73,13 +79,26 @@ fun AddGoalDialog(
 
                     Button(
                         onClick = {
-                            if (title.isNotBlank()) {
+                            if (title.isNotBlank() && !isCreating) {
                                 onConfirm(title, description.ifBlank { null })
                             }
                         },
-                        enabled = title.isNotBlank()
+                        enabled = title.isNotBlank() && !isCreating // ДОБАВЛЕНО
                     ) {
-                        Text("Создать")
+                        if (isCreating) {
+                            // Показываем индикатор загрузки
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Создание...")
+                            }
+                        } else {
+                            Text("Создать")
+                        }
                     }
                 }
             }

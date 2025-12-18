@@ -31,6 +31,7 @@ object DatabaseInitializer {
                     }
                 }
             })
+            .fallbackToDestructiveMigration()
             .build()
     }
 

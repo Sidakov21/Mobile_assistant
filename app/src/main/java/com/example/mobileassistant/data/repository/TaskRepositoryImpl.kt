@@ -62,15 +62,15 @@ class TaskRepositoryImpl(
     }
 
     override suspend fun updateTask(task: Task) {
-//        taskDao.updateTask(TaskEntity(
-//            taskId = task.id,
-//            subGoalId = 0, // TODO: нужно получать subGoalId
-//            title = task.title,
-//            progress = task.progress,
-//            isDone = task.isDone,
-//            note = task.note,
-//            completedAt = task.completedAt
-//        ))
+        taskDao.updateTask(TaskEntity(
+            taskId = task.id,
+            subGoalId = 0, // TODO: нужно получать subGoalId
+            title = task.title,
+            progress = task.progress,
+            isDone = task.isDone,
+            note = task.note,
+            completedAt = task.completedAt
+        ))
     }
 
     override suspend fun deleteTask(taskId: Int) {
@@ -82,4 +82,10 @@ class TaskRepositoryImpl(
     override suspend fun getSubGoalColor(subGoalId: Int): Int? {
         TODO("Not yet implemented")
     }
+
+    override fun observeGoals(userId: Int): Flow<List<Goal>> {
+        return goalDao.observeGoalsByUser(userId)
+            .map { goalEntities -> goalEntities.map { it.toDomain() } }
+    }
+
 }

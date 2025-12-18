@@ -4,9 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -22,6 +21,29 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Показываем ошибки
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                actionLabel = "OK"
+            )
+            viewModel.clearError()
+        }
+    }
+
+    // Показываем успешные сообщения
+    LaunchedEffect(state.showSuccessMessage) {
+        state.showSuccessMessage?.let { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = "OK"
+            )
+            viewModel.clearSuccessMessage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -35,9 +57,22 @@ fun MainScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    // Кнопка обновления
+                    IconButton(
+                        onClick = { viewModel.refreshData() },
+                        enabled = !state.isLoading
+                    ) {
+                        Icon(
+                            painter = painterResource(android.R.drawable.ic_menu_rotate),
+                            contentDescription = "Обновить"
+                        )
+                    }
+                }
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToSubGoals,
@@ -89,6 +124,8 @@ fun MainScreen(
                 CreateButtonsSection(
                     onCreateGoalClick = { viewModel.showAddGoalDialog() },
                     onCreateSubGoalClick = { viewModel.showAddSubGoalDialog() },
+                    isCreatingGoal = state.isCreatingGoal,
+                    isCreatingSubGoal = state.isCreatingSubGoal,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -102,7 +139,8 @@ fun MainScreen(
                 onDismiss = { viewModel.hideAddGoalDialog() },
                 onConfirm = { title, description ->
                     viewModel.createNewGoal(title, description)
-                }
+                },
+                isCreating = state.isCreatingGoal
             )
         }
 
@@ -112,7 +150,8 @@ fun MainScreen(
                 onDismiss = { viewModel.hideAddSubGoalDialog() },
                 onConfirm = { title, color ->
                     viewModel.createNewSubGoal(title, color)
-                }
+                },
+                isCreating = state.isCreatingSubGoal
             )
         }
     }

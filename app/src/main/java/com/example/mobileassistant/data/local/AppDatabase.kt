@@ -17,7 +17,7 @@ import com.example.mobileassistant.data.local.entity.TaskEntity
         SubGoalEntity::class,
         TaskEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 // 3. Подключаем конвертеры (создадим их на следующем шаге)

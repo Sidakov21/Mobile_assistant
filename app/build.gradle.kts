@@ -14,14 +14,24 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        // Конфигурация для 16 KB устройств
+        ndk {
+            abiFilters.addAll(arrayOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
     compileOptions {
@@ -37,6 +47,19 @@ android {
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
+    }
+    // Настройки для совместимости с 16 KB
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/*.kotlin_module"
+            excludes += "/META-INF/LICENSE*"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/io.netty.versions.properties"
+        }
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
 }

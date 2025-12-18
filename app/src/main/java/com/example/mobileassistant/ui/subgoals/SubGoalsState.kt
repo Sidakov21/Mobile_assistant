@@ -12,8 +12,10 @@ data class SubGoalsState(
     val searchQuery: String = "",
     val sortType: SortType = SortType.DATE_NEWEST,
     val isLoading: Boolean = false,
+    val isAddingTask: Boolean = false,
     val showAddTaskDialog: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showSuccessMessage: String? = null
 )
 
 enum class SortType {

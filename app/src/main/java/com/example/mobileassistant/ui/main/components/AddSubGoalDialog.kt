@@ -15,12 +15,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSubGoalDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, Int) -> Unit,
+    isCreating: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var title by remember { mutableStateOf("") }
@@ -28,11 +30,11 @@ fun AddSubGoalDialog(
     val focusRequester = remember { FocusRequester() }
 
     val colors = listOf(
-        0xFF4CAF50.toInt(), // Зеленый
-        0xFF2196F3.toInt(), // Синий
-        0xFFFF9800.toInt(), // Оранжевый
-        0xFF9C27B0.toInt(), // Фиолетовый
-        0xFFF44336.toInt()  // Красный
+        0xFF4CAF50.toInt(),
+        0xFF2196F3.toInt(),
+        0xFFFF9800.toInt(),
+        0xFF9C27B0.toInt(),
+        0xFFF44336.toInt()
     )
 
     Dialog(onDismissRequest = onDismiss) {
@@ -59,7 +61,8 @@ fun AddSubGoalDialog(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    enabled = !isCreating
                 )
 
                 Text(
@@ -103,7 +106,10 @@ fun AddSubGoalDialog(
                             Box(
                                 modifier = Modifier
                                     .matchParentSize()
-                                    .clickable { selectedColor.value = color }
+                                    .clickable(
+                                        enabled = !isCreating,
+                                        onClick = { selectedColor.value = color }
+                                    )
                             )
                         }
                     }
@@ -114,7 +120,10 @@ fun AddSubGoalDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !isCreating
+                    ) {
                         Text("Отмена")
                     }
 
@@ -122,13 +131,25 @@ fun AddSubGoalDialog(
 
                     Button(
                         onClick = {
-                            if (title.isNotBlank()) {
+                            if (title.isNotBlank() && !isCreating) {
                                 onConfirm(title, selectedColor.value)
                             }
                         },
-                        enabled = title.isNotBlank()
+                        enabled = title.isNotBlank() && !isCreating // ДОБАВЛЕНО
                     ) {
-                        Text("Создать")
+                        if (isCreating) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Создание...")
+                            }
+                        } else {
+                            Text("Создать")
+                        }
                     }
                 }
             }
