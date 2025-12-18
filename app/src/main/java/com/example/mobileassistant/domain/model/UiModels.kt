@@ -72,7 +72,6 @@ data class RadarUi(
 )
 
 
-
 // Модель для активности за неделю (прогресс-бар)
 data class WeeklyActivityUi(
     val subGoalTitle: String,

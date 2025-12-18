@@ -1,24 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Базовая тема AppCompat -->
-    <style name="Theme.MobileAssistant" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Цвета -->
-        <item name="colorPrimary">#FF6200EE</item>
-        <item name="colorPrimaryVariant">#FF3700B3</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">#FF03DAC5</item>
-        <item name="colorSecondaryVariant">#FF018786</item>
-        <item name="colorOnSecondary">#000000</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <item name="android:windowBackground">@android:color/black</item>
-
-        <!-- Стиль для EditText -->
-        <item name="editTextStyle">@style/Widget.AppCompat.EditText</item>
-    </style>
-
-    <style name="Widget.App.EditText" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-        <item name="boxStrokeColor">#4CAF50</item>
-        <item name="android:textColorHint">#888888</item>
-        <item name="android:textColor">@android:color/white</item>
+<resources>
+    <style name="Theme.MobileAssistant" parent="android:Theme.Material.Light.DarkActionBar">
+        <item name="android:statusBarColor">@color/purple_500</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

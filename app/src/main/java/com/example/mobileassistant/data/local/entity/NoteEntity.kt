@@ -26,5 +26,5 @@ data class NoteEntity(
     val taskId: Int,
     val note: String?,
 
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: Long = System.currentTimeMillis()
 )

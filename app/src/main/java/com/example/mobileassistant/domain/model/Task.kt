@@ -10,13 +10,14 @@ data class Task(
     val subGoalId: Int,
     val progress: Int,
     val isDone: Boolean,
-    val completedAt: LocalDateTime?,
+    val completedAt: Long?,
     val note: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )
 
-// Обновляем функцию toUi
+// Обновляем функцию toUi для работы с Long
 fun Task.toUi(subGoalTitle: String = "", subGoalColor: Int = 0xFF4CAF50.toInt()): TaskCardUi {
+    val dateFormat = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault())
     return TaskCardUi(
         id = id,
         title = title,
@@ -24,7 +25,8 @@ fun Task.toUi(subGoalTitle: String = "", subGoalColor: Int = 0xFF4CAF50.toInt())
         note = note,
         subGoalTitle = subGoalTitle,
         subGoalColor = subGoalColor,
-        formattedDate = ""
+        formattedDate = dateFormat.format(java.util.Date(createdAt)),
+        subGoalId = subGoalId
     )
 }
 
@@ -70,6 +72,7 @@ fun SubGoalEntity.toUi(progress: Int = 0, taskCount: Int = 0): SubGoalButtonUi {
     )
 }
 
+// Обновляем функцию toEntity
 fun Task.toEntity(): TaskEntity {
     return TaskEntity(
         taskId = this.id,

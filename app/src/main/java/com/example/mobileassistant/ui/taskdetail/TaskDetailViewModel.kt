@@ -2,45 +2,29 @@ package com.example.mobileassistant.ui.taskdetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mobileassistant.domain.model.Task
 import com.example.mobileassistant.domain.model.repository.GoalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 
 class TaskDetailViewModel(
-    private val repository: GoalRepository?
+    private val repository: GoalRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TaskDetailState())
     val state: StateFlow<TaskDetailState> = _state
 
-    private var originalTask: Task? = null
+    private var originalTaskId: Int? = null
 
     fun loadTask(taskId: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
 
             try {
-                val task = if (repository is com.example.mobileassistant.data.repository.GoalRepositoryImpl) {
-                    repository.getTask(taskId)
-                } else {
-                    // Fallback для тестирования
-                    Task(
-                        id = taskId,
-                        subGoalId = 1,
-                        title = "Задача $taskId",
-                        progress = 50,
-                        isDone = false,
-                        completedAt = null,
-                        note = "Описание задачи $taskId"
-                    )
-                }
-
+                val task = repository.getTask(taskId)
                 task?.let {
-                    originalTask = it
+                    originalTaskId = taskId
                     _state.update {
                         it.copy(
                             taskId = taskId,
@@ -48,7 +32,8 @@ class TaskDetailViewModel(
                             note = it.note,
                             progress = it.progress,
                             isDone = it.isDone,
-                            isLoading = false
+                            isLoading = false,
+                            error = null
                         )
                     }
                 } ?: run {
@@ -88,50 +73,44 @@ class TaskDetailViewModel(
 
             try {
                 val currentState = _state.value
+                val taskId = currentState.taskId
 
-                if (repository is com.example.mobileassistant.data.repository.GoalRepositoryImpl) {
-                    // Получаем текущую задачу
-                    val original = originalTask
-                    if (original != null) {
-                        // Обновляем задачу
-                        val updatedTask = Task(
-                            id = original.id,
-                            subGoalId = original.subGoalId,
-                            title = currentState.title,
-                            progress = currentState.progress,
-                            isDone = currentState.isDone,
-                            completedAt = if (currentState.progress == 100)
-                                LocalDateTime.now()
-                            else
-                                original.completedAt,
-                            note = currentState.note,
-                            createdAt = original.createdAt
-                        )
+                val originalTask = repository.getTask(taskId)
 
-                        repository.updateTask(updatedTask)
-
-                        // Если прогресс 100%, отмечаем как выполненную
-                        if (currentState.progress == 100 && !original.isDone) {
-                            repository.completeTask(original.id)
+                if (originalTask != null) {
+                    val updatedTask = originalTask.copy(
+                        title = currentState.title,
+                        note = currentState.note,
+                        progress = currentState.progress,
+                        isDone = currentState.progress == 100,
+                        completedAt = if (currentState.progress == 100 && !originalTask.isDone) {
+                            System.currentTimeMillis()
+                        } else {
+                            originalTask.completedAt
                         }
-                    } else {
-                        // Создаем новую задачу (если нужно)
-                        // TODO: Реализовать создание новой задачи
-                    }
-                }
-
-                _state.update {
-                    it.copy(
-                        isSaving = false,
-                        isModified = false,
-                        showSaveSuccess = true
                     )
-                }
 
-                // Автоматически скрываем успешное сообщение через 2 секунды
-                viewModelScope.launch {
-                    kotlinx.coroutines.delay(2000)
-                    hideSaveSuccess()
+                    repository.updateTask(updatedTask)
+
+                    _state.update {
+                        it.copy(
+                            isSaving = false,
+                            isModified = false,
+                            showSaveSuccess = true
+                        )
+                    }
+
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(2000)
+                        hideSaveSuccess()
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            isSaving = false,
+                            error = "Задача не найдена для сохранения"
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _state.update {
@@ -150,10 +129,7 @@ class TaskDetailViewModel(
 
             try {
                 val taskId = _state.value.taskId
-
-                if (repository is com.example.mobileassistant.data.repository.GoalRepositoryImpl) {
-                    repository.deleteTask(taskId)
-                }
+                repository.deleteTask(taskId)
 
                 _state.update {
                     it.copy(
@@ -169,19 +145,6 @@ class TaskDetailViewModel(
                     )
                 }
             }
-        }
-    }
-
-    fun toggleDone() {
-        val current = _state.value
-        val newProgress = if (current.isDone) 0 else 100
-
-        _state.update {
-            it.copy(
-                isDone = !current.isDone,
-                progress = newProgress,
-                isModified = true
-            )
         }
     }
 

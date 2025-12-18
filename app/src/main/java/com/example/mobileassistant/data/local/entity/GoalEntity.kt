@@ -30,7 +30,7 @@ data class GoalEntity(
     val description: String? = null,
 
     val isCompleted: Boolean = false,
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 fun GoalEntity.toDomain() = Goal(

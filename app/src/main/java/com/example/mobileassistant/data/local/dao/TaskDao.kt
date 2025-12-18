@@ -28,16 +28,20 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE taskId = :taskId")
     suspend fun getTaskById(taskId: Int): TaskEntity?
 
-    // Получить задачи по ID подцели
+    // Получить задачи по ID подцели (синхронно)
     @Query("SELECT * FROM tasks WHERE subGoalId = :subGoalId ORDER BY createdAt DESC")
     suspend fun getTasksBySubGoal(subGoalId: Int): List<TaskEntity>
 
-    // Получить прогресс подцели
+    // ВАЖНО: Исправляем проблемный запрос с CASE WHEN
+    // SQLite не поддерживает DECIMAL, используем целые числа
     @Query("""
         SELECT 
             CASE 
                 WHEN COUNT(*) = 0 THEN 0
-                ELSE (SUM(CASE WHEN isDone THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
+                ELSE CAST(
+                    (SUM(CASE WHEN isDone = 1 THEN 1 ELSE 0 END) * 100) / COUNT(*) 
+                    AS INTEGER
+                )
             END
         FROM tasks 
         WHERE subGoalId = :subGoalId
@@ -49,6 +53,7 @@ interface TaskDao {
         SELECT COUNT(*) 
         FROM tasks 
         WHERE subGoalId = :subGoalId 
+        AND completedAt IS NOT NULL
         AND completedAt >= :sevenDaysAgo
         AND isDone = 1
     """)
@@ -81,4 +86,12 @@ interface TaskDao {
     // Получить количество выполненных задач в подцели
     @Query("SELECT COUNT(*) FROM tasks WHERE subGoalId = :subGoalId AND isDone = 1")
     suspend fun getCompletedTaskCount(subGoalId: Int): Int
+
+    @Query("""
+    SELECT tasks.* FROM tasks
+    INNER JOIN sub_goals ON tasks.subGoalId = sub_goals.subGoalId
+    WHERE sub_goals.goalId = :goalId
+    ORDER BY tasks.createdAt DESC
+""")
+    suspend fun getTasksByGoal(goalId: Int): List<TaskEntity>
 }

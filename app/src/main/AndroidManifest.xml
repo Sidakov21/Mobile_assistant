@@ -23,13 +23,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Новая Activity для деталей задачи -->
-        <activity
-            android:name=".ui.taskdetail.TaskDetailActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MobileAssistant"
-            android:windowSoftInputMode="adjustResize" />
-
     </application>
 
 </manifest>

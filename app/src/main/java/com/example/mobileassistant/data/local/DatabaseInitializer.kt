@@ -17,6 +17,13 @@ object DatabaseInitializer {
 
     private val executor = Executors.newSingleThreadExecutor()
 
+    object TimeUtils {
+        // Возвращает timestamp для "N дней назад"
+        fun daysAgo(days: Long): Long {
+            return System.currentTimeMillis() - (days * 24 * 60 * 60 * 1000)
+        }
+    }
+
     fun initialize(context: Context): AppDatabase {
         return Room.databaseBuilder(
             context,
@@ -26,7 +33,7 @@ object DatabaseInitializer {
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
-                    executor.execute {
+                    Executors.newSingleThreadExecutor().execute {
                         prePopulateDatabase(context)
                     }
                 }
@@ -58,7 +65,7 @@ object DatabaseInitializer {
                     title = "Физическое развитие",
                     description = "Улучшить физическую форму и здоровье",
                     isCompleted = false,
-                    createdAt = LocalDateTime.now().minusDays(30)
+                    createdAt = TimeUtils.daysAgo(30)
                 )
             ).toInt()
 
@@ -69,7 +76,8 @@ object DatabaseInitializer {
                     title = "Стойка на руках",
                     color = 0xFF4CAF50.toInt(),
                     isCompleted = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 30
+                    createdAt = TimeUtils.daysAgo(30)
+
                 )
             ).toInt()
 
@@ -79,7 +87,8 @@ object DatabaseInitializer {
                     title = "Подтягивания",
                     color = 0xFF2196F3.toInt(),
                     isCompleted = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 25
+                    createdAt = TimeUtils.daysAgo(25)
+
                 )
             ).toInt()
 
@@ -89,7 +98,7 @@ object DatabaseInitializer {
                     title = "Отжимания",
                     color = 0xFFFF9800.toInt(),
                     isCompleted = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 20
+                    createdAt = TimeUtils.daysAgo(20)
                 )
             ).toInt()
 
@@ -101,7 +110,7 @@ object DatabaseInitializer {
                     note = "Работать над стабильностью плеч, контроль корпуса",
                     progress = 50,
                     isDone = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 7
+                    createdAt = TimeUtils.daysAgo(7)
                 )
             )
 
@@ -112,8 +121,8 @@ object DatabaseInitializer {
                     note = "Удерживать положение 30 секунд",
                     progress = 80,
                     isDone = true,
-                    completedAt = LocalDateTime.now().minusDays(3),
-                    createdAt = System.currentTimeMillis() - 86400000 * 14
+                    completedAt = TimeUtils.daysAgo(7),
+                    createdAt = TimeUtils.daysAgo(1)
                 )
             )
 
@@ -124,7 +133,7 @@ object DatabaseInitializer {
                     note = "Тренировка баланса",
                     progress = 30,
                     isDone = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 5
+                    createdAt = TimeUtils.daysAgo(5)
                 )
             )
 
@@ -136,8 +145,8 @@ object DatabaseInitializer {
                     note = "3 подхода по 8 повторений",
                     progress = 70,
                     isDone = true,
-                    completedAt = LocalDateTime.now().minusDays(1),
-                    createdAt = System.currentTimeMillis() - 86400000 * 10
+                    completedAt = TimeUtils.daysAgo(2),
+                    createdAt = TimeUtils.daysAgo(10)
                 )
             )
 
@@ -148,7 +157,7 @@ object DatabaseInitializer {
                     note = "Работа на ширину спины",
                     progress = 40,
                     isDone = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 3
+                    createdAt = TimeUtils.daysAgo(3)
                 )
             )
 
@@ -160,8 +169,8 @@ object DatabaseInitializer {
                     note = "Тренировка техники",
                     progress = 90,
                     isDone = true,
-                    completedAt = LocalDateTime.now().minusDays(5),
-                    createdAt = System.currentTimeMillis() - 86400000 * 12
+                    completedAt = TimeUtils.daysAgo(5),
+                    createdAt = TimeUtils.daysAgo(12)
                 )
             )
 
@@ -172,7 +181,7 @@ object DatabaseInitializer {
                     note = "Для развития трицепса",
                     progress = 60,
                     isDone = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 2
+                    createdAt = TimeUtils.daysAgo(2)
                 )
             )
 
@@ -183,7 +192,7 @@ object DatabaseInitializer {
                     title = "Изучение Kotlin",
                     description = "Освоить разработку на Kotlin для Android",
                     isCompleted = false,
-                    createdAt = LocalDateTime.now().minusDays(15)
+                    createdAt = TimeUtils.daysAgo(15)
                 )
             ).toInt()
 
@@ -194,7 +203,7 @@ object DatabaseInitializer {
                     title = "Основы Kotlin",
                     color = 0xFF9C27B0.toInt(),
                     isCompleted = true,
-                    createdAt = System.currentTimeMillis() - 86400000 * 15
+                    createdAt = TimeUtils.daysAgo(15)
                 )
             ).toInt()
 
@@ -204,7 +213,7 @@ object DatabaseInitializer {
                     title = "Android Development",
                     color = 0xFF607D8B.toInt(),
                     isCompleted = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 8
+                    createdAt = TimeUtils.daysAgo(8)
                 )
             ).toInt()
 
@@ -216,8 +225,8 @@ object DatabaseInitializer {
                     note = "Переменные, функции, классы",
                     progress = 100,
                     isDone = true,
-                    completedAt = LocalDateTime.now().minusDays(12),
-                    createdAt = System.currentTimeMillis() - 86400000 * 15
+                    completedAt = TimeUtils.daysAgo(12),
+                    createdAt = TimeUtils.daysAgo(15)
                 )
             )
 
@@ -228,8 +237,8 @@ object DatabaseInitializer {
                     note = "Async/await, потоки, scope",
                     progress = 100,
                     isDone = true,
-                    completedAt = LocalDateTime.now().minusDays(8),
-                    createdAt = System.currentTimeMillis() - 86400000 * 12
+                    completedAt = TimeUtils.daysAgo(8),
+                    createdAt = TimeUtils.daysAgo(12)
                 )
             )
 
@@ -241,11 +250,12 @@ object DatabaseInitializer {
                     note = "UI компоненты, состояние, навигация",
                     progress = 75,
                     isDone = false,
-                    createdAt = System.currentTimeMillis() - 86400000 * 8
+                    createdAt = TimeUtils.daysAgo(8)
                 )
             )
 
             db.close()
         }
+        
     }
 }

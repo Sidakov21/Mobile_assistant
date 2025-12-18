@@ -12,5 +12,5 @@ data class UserEntity(
     val username: String,
     val passwordHash: String,
 
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: Long = System.currentTimeMillis()
 )

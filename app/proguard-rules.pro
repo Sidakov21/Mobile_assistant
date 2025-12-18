@@ -19,3 +19,17 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+## Room
+#-keep class * extends androidx.room.RoomDatabase
+#-keep class * extends androidx.room.Entity
+#-keepclassmembers class * {
+#    @androidx.room.* *;
+#}
+#
+## Compose
+#-keep class androidx.compose.runtime.internal.ComposableLambdaImpl
+#-keep class androidx.compose.ui.graphics.Brush
+#
+## Kotlin
+#-keep class kotlin.coroutines.Continuation

@@ -12,15 +12,12 @@ data class SubGoalWithTasks(
         parentColumn = "subGoalId",
         entityColumn = "subGoalId"
     )
-    val tasks: List<TaskEntity>,
-
-    @Ignore
-    var progress: Int // 0-100, рассчитывается автоматически
+    val tasks: List<TaskEntity>
 ) {
-    // Конструктор без 'progress', который будет использовать Room
-    constructor (subGoal: SubGoalEntity, tasks: List<TaskEntity>) : this(
-        subGoal,
-        tasks,
-        if (tasks.isEmpty()) 0 else (tasks.count { it.isDone } * 100) / tasks.size
-    )
+    // Вычисляем прогресс вручную
+    val progress: Int
+        get() = if (tasks.isEmpty()) 0 else {
+            val completed = tasks.count { it.isDone }
+            (completed * 100) / tasks.size
+        }
 }

@@ -2,14 +2,9 @@ package com.example.mobileassistant.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mobileassistant.domain.model.RadarPointUi
-import com.example.mobileassistant.domain.model.RadarUi
-import com.example.mobileassistant.domain.model.SubGoal
-import com.example.mobileassistant.domain.model.SubGoalButtonUi
-import com.example.mobileassistant.domain.model.Task
-import com.example.mobileassistant.domain.model.TaskCardUi
-import com.example.mobileassistant.domain.model.WeeklyActivityUi
+import com.example.mobileassistant.domain.model.*
 import com.example.mobileassistant.domain.model.repository.GoalRepository
+import com.example.mobileassistant.ui.main.model.DomainMapper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -22,10 +17,8 @@ class MainScreenViewModel(
     private val _state = MutableStateFlow(MainScreenState())
     val state: StateFlow<MainScreenState> = _state.asStateFlow()
 
-    private var currentGoalId: Int? = null
-
-    // Поток для обновления данных
     private val refreshTrigger = MutableSharedFlow<Unit>()
+    private var currentGoalId: Int? = null
 
     init {
         setupDataObservers()
@@ -34,7 +27,6 @@ class MainScreenViewModel(
 
     private fun setupDataObservers() {
         viewModelScope.launch {
-            // Реактивно обновляем цели при их изменении
             repository.observeGoals(userId = 1)
                 .combine(refreshTrigger) { goals, _ -> goals }
                 .distinctUntilChanged()
@@ -49,9 +41,7 @@ class MainScreenViewModel(
                         )
                     }
 
-                    if (selectedGoal != null) {
-                        loadGoalData(selectedGoal.id)
-                    }
+                    selectedGoal?.let { loadGoalData(it.id) }
                 }
         }
     }
@@ -59,13 +49,15 @@ class MainScreenViewModel(
     private fun loadInitialData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            triggerRefresh() // Инициируем обновление
+            refreshTrigger.emit(Unit)
             _state.update { it.copy(isLoading = false) }
         }
     }
 
-    private suspend fun triggerRefresh() {
-        refreshTrigger.emit(Unit)
+    private fun triggerRefresh() {
+        viewModelScope.launch {
+            refreshTrigger.emit(Unit)
+        }
     }
 
     private fun loadGoalData(goalId: Int) {
@@ -82,13 +74,7 @@ class MainScreenViewModel(
                 val subGoalButtons = subGoals.map { subGoal ->
                     val progress = subGoalProgresses[subGoal.id] ?: 0
                     val taskCount = tasks.count { it.subGoalId == subGoal.id }
-                    SubGoalButtonUi(
-                        id = subGoal.id,
-                        title = subGoal.title,
-                        color = 0xFF4CAF50.toInt(),
-                        progress = progress,
-                        taskCount = taskCount
-                    )
+                    DomainMapper.subGoal.toUi(subGoal, progress, taskCount)
                 }
 
                 // Создаем радар-диаграмму
@@ -99,7 +85,7 @@ class MainScreenViewModel(
                         RadarPointUi(
                             label = subGoal.title,
                             value = progress,
-                            color = 0xFF4CAF50.toInt(),
+                            color = subGoal.color,
                             angle = angle
                         )
                     },
@@ -118,15 +104,10 @@ class MainScreenViewModel(
                 val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 val taskCards = tasks.map { task ->
                     val subGoal = subGoals.find { it.id == task.subGoalId }
-                    TaskCardUi(
-                        id = task.id,
-                        title = task.title,
-                        progress = task.progress,
-                        note = task.note,
+                    DomainMapper.task.toUi(
+                        task = task,
                         subGoalTitle = subGoal?.title ?: "",
-                        subGoalColor = 0xFF4CAF50.toInt(),
-                        formattedDate = dateFormat.format(Date(task.createdAt)),
-                        subGoalId = task.subGoalId
+                        subGoalColor = subGoal?.color ?: 0xFF4CAF50.toInt()
                     )
                 }
 
@@ -153,25 +134,28 @@ class MainScreenViewModel(
         return (completedTasks * 100) / subGoalTasks.size
     }
 
-    private fun calculateWeeklyActivity(subGoals: List<SubGoal>, tasks: List<Task>): List<WeeklyActivityUi> {
-        val oneWeekAgo = java.time.LocalDateTime.now().minusDays(7)
+    private fun calculateWeeklyActivity(
+        subGoals: List<SubGoal>,
+        tasks: List<Task>
+    ): List<WeeklyActivityUi> {
+        val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000)
 
         return subGoals.map { subGoal ->
             val subGoalTasks = tasks.filter { it.subGoalId == subGoal.id }
             val completedThisWeek = subGoalTasks.count {
-                it.isDone && it.completedAt?.isAfter(oneWeekAgo) == true
+                it.isDone && it.completedAt != null && it.completedAt!! > oneWeekAgo
             }
 
             WeeklyActivityUi(
                 subGoalTitle = subGoal.title,
                 progress = calculateSubGoalProgress(subGoal.id, subGoalTasks),
-                color = 0xFF4CAF50.toInt(),
+                color = subGoal.color,
                 activityCount = completedThisWeek
             )
         }
     }
 
-    // ДИАЛОГИ
+    // Диалоги
     fun showAddGoalDialog() {
         _state.update { it.copy(showAddGoalDialog = true) }
     }
@@ -188,37 +172,38 @@ class MainScreenViewModel(
         _state.update { it.copy(showAddSubGoalDialog = false) }
     }
 
-    // СОЗДАНИЕ ЦЕЛИ - УЛУЧШЕННАЯ ВЕРСИЯ
+    // Создание целей
     fun createNewGoal(title: String, description: String?) {
         viewModelScope.launch {
             _state.update { it.copy(isCreatingGoal = true) }
 
             try {
                 repository.addGoal(userId = 1, title = title, description = description)
-                triggerRefresh() // Запускаем обновление данных
+                triggerRefresh()
                 hideAddGoalDialog()
 
-                // Показываем уведомление об успехе
-                _state.update { it.copy(
-                    isCreatingGoal = false,
-                    showSuccessMessage = "Цель '$title' создана"
-                ) }
+                _state.update {
+                    it.copy(
+                        isCreatingGoal = false,
+                        showSuccessMessage = "Цель '$title' создана"
+                    )
+                }
 
-                // Автоматически скрываем сообщение через 2 секунды
                 viewModelScope.launch {
                     kotlinx.coroutines.delay(2000)
                     _state.update { it.copy(showSuccessMessage = null) }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(
-                    isCreatingGoal = false,
-                    error = "Ошибка создания цели: ${e.message}"
-                ) }
+                _state.update {
+                    it.copy(
+                        isCreatingGoal = false,
+                        error = "Ошибка создания цели: ${e.message}"
+                    )
+                }
             }
         }
     }
 
-    // СОЗДАНИЕ ПОДЦЕЛИ - УЛУЧШЕННАЯ ВЕРСИЯ
     fun createNewSubGoal(title: String, color: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isCreatingSubGoal = true) }
@@ -226,31 +211,35 @@ class MainScreenViewModel(
             try {
                 currentGoalId?.let { goalId ->
                     repository.addSubGoal(goalId, title, color)
-                    loadGoalData(goalId) // Обновляем данные конкретной цели
+                    loadGoalData(goalId)
                     hideAddSubGoalDialog()
 
-                    // Показываем уведомление об успехе
-                    _state.update { it.copy(
-                        isCreatingSubGoal = false,
-                        showSuccessMessage = "Подцель '$title' создана"
-                    ) }
+                    _state.update {
+                        it.copy(
+                            isCreatingSubGoal = false,
+                            showSuccessMessage = "Подцель '$title' создана"
+                        )
+                    }
 
-                    // Автоматически скрываем сообщение через 2 секунды
                     viewModelScope.launch {
                         kotlinx.coroutines.delay(2000)
                         _state.update { it.copy(showSuccessMessage = null) }
                     }
                 } ?: run {
-                    _state.update { it.copy(
-                        isCreatingSubGoal = false,
-                        error = "Не выбрана цель для создания подцели"
-                    ) }
+                    _state.update {
+                        it.copy(
+                            isCreatingSubGoal = false,
+                            error = "Не выбрана цель для создания подцели"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(
-                    isCreatingSubGoal = false,
-                    error = "Ошибка создания подцели: ${e.message}"
-                ) }
+                _state.update {
+                    it.copy(
+                        isCreatingSubGoal = false,
+                        error = "Ошибка создания подцели: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -263,7 +252,6 @@ class MainScreenViewModel(
         _state.update { it.copy(showSuccessMessage = null) }
     }
 
-    // Метод для принудительного обновления данных
     fun refreshData() {
         viewModelScope.launch {
             triggerRefresh()
@@ -271,10 +259,9 @@ class MainScreenViewModel(
     }
 }
 
-// Обновляем MainScreenState
 data class MainScreenState(
-    val goals: List<com.example.mobileassistant.domain.model.Goal> = emptyList(),
-    val selectedGoal: com.example.mobileassistant.domain.model.Goal? = null,
+    val goals: List<Goal> = emptyList(),
+    val selectedGoal: Goal? = null,
     val subGoals: List<SubGoalButtonUi> = emptyList(),
     val selectedSubGoal: SubGoalButtonUi? = null,
     val tasks: List<TaskCardUi> = emptyList(),

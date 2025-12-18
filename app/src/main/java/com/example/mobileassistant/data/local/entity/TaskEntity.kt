@@ -35,8 +35,8 @@ data class TaskEntity(
 
     val progress: Int = 0, // 0–100
 
-    val createdAt: Long = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC),
-    val completedAt: LocalDateTime? = null
+    val createdAt: Long = System.currentTimeMillis(),
+    val completedAt: Long? = null
 )
 
 fun TaskEntity.toDomain() = Task(
@@ -45,5 +45,7 @@ fun TaskEntity.toDomain() = Task(
     subGoalId = subGoalId,
     progress = progress,
     isDone = isDone,
-    completedAt = completedAt
+    completedAt = completedAt,
+    note = note,
+    createdAt = createdAt
 )

@@ -28,10 +28,11 @@ data class SubGoalEntity(
     val description: String? = null,
     val color: Int = 0xFF4CAF50.toInt(),
     val isCompleted: Boolean = false,
-    val createdAt: Long
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 fun SubGoalEntity.toDomain() = SubGoal(
     id = subGoalId,
-    title = title
+    title = title,
+    color = color
 )

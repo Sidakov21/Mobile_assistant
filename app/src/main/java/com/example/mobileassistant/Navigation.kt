@@ -1,9 +1,8 @@
 package com.example.mobileassistant
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -14,7 +13,6 @@ import com.example.mobileassistant.ui.subgoals.SubGoalsViewModel
 import com.example.mobileassistant.ui.taskdetail.TaskDetailScreen
 import com.example.mobileassistant.ui.taskdetail.TaskDetailViewModel
 
-// Определяем маршруты навигации
 sealed class Screen(val route: String) {
     object Main : Screen("main")
     object SubGoals : Screen("subgoals/{goalId}") {
@@ -32,7 +30,6 @@ fun AppNavigation(
     taskDetailViewModel: TaskDetailViewModel
 ) {
     val navController = rememberNavController()
-    val mainState by mainViewModel.state.collectAsState()
 
     NavHost(
         navController = navController,
@@ -43,7 +40,7 @@ fun AppNavigation(
             MainScreen(
                 viewModel = mainViewModel,
                 onNavigateToSubGoals = {
-                    mainState.selectedGoal?.let { goal ->
+                    mainViewModel.state.value.selectedGoal?.let { goal ->
                         navController.navigate(Screen.SubGoals.createRoute(goal.id))
                     }
                 },
@@ -63,9 +60,7 @@ fun AppNavigation(
 
             SubGoalsScreen(
                 viewModel = subGoalsViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
+                onNavigateBack = { navController.popBackStack() },
                 onNavigateToTaskDetail = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId))
                 }
@@ -82,7 +77,7 @@ fun AppNavigation(
                 }
             }
 
-            val taskState by taskDetailViewModel.state.collectAsState()
+            val taskState by taskDetailViewModel.state.collectAsStateWithLifecycle()
 
             LaunchedEffect(taskState.shouldClose) {
                 if (taskState.shouldClose) {
@@ -94,9 +89,7 @@ fun AppNavigation(
                 TaskDetailScreen(
                     viewModel = taskDetailViewModel,
                     taskId = taskId,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }
