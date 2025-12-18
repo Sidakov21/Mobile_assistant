@@ -4,55 +4,76 @@ import MobileAssistantTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import androidx.room.Room.databaseBuilder
-import com.example.mobileassistant.data.local.AppDatabase
-import com.example.mobileassistant.data.local.entity.GoalEntity
-import com.example.mobileassistant.data.repository.TaskRepositoryImpl
-import kotlin.jvm.java
+import com.example.mobileassistant.AppNavigation
+import com.example.mobileassistant.data.repository.FakeGoalRepository
+import com.example.mobileassistant.ui.subgoals.SubGoalsViewModel
+import com.example.mobileassistant.ui.taskdetail.TaskDetailViewModel
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Инициализируем базу данных Room
-        val db = databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "mobile-assistant-db"
-        ).build()
+        val repository = FakeGoalRepository()
 
-        // 2. Создаем репозиторий, передавая в него DAO
-        val repository = TaskRepositoryImpl(
-            goalDao = db.goalDao(),
-            subGoalDao = db.subGoalDao(),
-            taskDao = db.taskDao()
-        )
         setContent {
             MobileAssistantTheme {
+                // Создаем ViewModel для каждого экрана
+                val mainViewModel: MainScreenViewModel = viewModel(
+                    factory = MainViewModelFactory(repository)
+                )
 
-                // 3. Создаем фабрику для ViewModel, чтобы передать туда репозиторий
-                val viewModelFactory = object : ViewModelProvider.Factory {
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
-                            @Suppress("UNCHECKED_CAST")
-                            return MainViewModel(repository) as T
+                val subGoalsViewModel: SubGoalsViewModel = viewModel(
+                    factory = SubGoalsViewModelFactory(repository)
+                )
 
-                        }
-                        throw IllegalArgumentException("Unknown ViewModel class")
-                    }
-                }
+                val taskDetailViewModel: TaskDetailViewModel = viewModel(
+                    factory = TaskDetailViewModelFactory()
+                )
 
-                // 4. Передаем фабрику в функцию viewModel()
-                MainScreen(
-                    viewModel = viewModel(factory = viewModelFactory)
+                // Используем навигацию
+                AppNavigation(
+                    mainViewModel = mainViewModel,
+                    subGoalsViewModel = subGoalsViewModel,
+                    taskDetailViewModel = taskDetailViewModel
                 )
             }
         }
+    }
+}
+
+// Фабрики для ViewModel
+class MainViewModelFactory(
+    private val repository: com.example.mobileassistant.domain.model.repository.GoalRepository
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainScreenViewModel::class.java)) {
+            return MainScreenViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class SubGoalsViewModelFactory(
+    private val repository: com.example.mobileassistant.domain.model.repository.GoalRepository
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SubGoalsViewModel::class.java)) {
+            return SubGoalsViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class TaskDetailViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(TaskDetailViewModel::class.java)) {
+            return TaskDetailViewModel() as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

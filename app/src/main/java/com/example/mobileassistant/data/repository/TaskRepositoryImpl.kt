@@ -3,6 +3,7 @@ package com.example.mobileassistant.data.repository
 import com.example.mobileassistant.data.local.dao.GoalDao
 import com.example.mobileassistant.data.local.dao.SubGoalDao
 import com.example.mobileassistant.data.local.dao.TaskDao
+import com.example.mobileassistant.data.local.entity.GoalEntity
 import com.example.mobileassistant.data.local.entity.SubGoalEntity
 import com.example.mobileassistant.data.local.entity.TaskEntity
 import com.example.mobileassistant.data.local.entity.toDomain
@@ -33,12 +34,47 @@ class TaskRepositoryImpl(
                 data.flatMap { it.tasks.map { t -> t.toDomain() } }
     }
 
-    override suspend fun addSubGoal(goalId: Int, title: String) {
-        subGoalDao.insertSubGoal(SubGoalEntity(goalId = goalId, title = title))
+    override suspend fun addSubGoal(goalId: Int, title: String, color: Int) {
+        subGoalDao.insertSubGoal(SubGoalEntity(
+            goalId = goalId,
+            title = title,
+            color = color
+        ))
     }
 
-    override suspend fun addTask(subGoalId: Int, title: String) {
-        taskDao.insertTask(TaskEntity(subGoalId = subGoalId, title = title))
+    override suspend fun addTask(subGoalId: Int, title: String, note: String) {
+        taskDao.insertTask(TaskEntity(
+            subGoalId = subGoalId,
+            title = title,
+            note = note
+        ))
+    }
+
+    // НОВЫЕ МЕТОДЫ:
+
+    override suspend fun addGoal(userId: Int, title: String, description: String?) {
+        goalDao.insertGoal(GoalEntity(
+            userId = userId,
+            title = title,
+            description = description
+        ))
+    }
+
+    override suspend fun updateTask(task: Task) {
+        taskDao.updateTask(TaskEntity(
+            taskId = task.id,
+            subGoalId = 0, // TODO: нужно получать subGoalId
+            title = task.title,
+            progress = task.progress,
+            isDone = task.isDone,
+            note = task.note,
+            completedAt = task.completedAt
+        ))
+    }
+
+    override suspend fun deleteTask(taskId: Int) {
+        // TODO: нужно получить задачу и удалить
+        val task = taskDao.getTasksBySubGoals(listOf()) // заглушка
+        // taskDao.deleteTask(task)
     }
 }
-

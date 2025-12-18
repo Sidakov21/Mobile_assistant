@@ -9,3 +9,4 @@ fun WeekStatItem.toUi() = WeekActivityUi(
     completed = completed,
     color = color
 )
+

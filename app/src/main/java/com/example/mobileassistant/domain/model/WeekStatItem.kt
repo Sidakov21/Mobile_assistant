@@ -1,5 +1,14 @@
 package com.example.mobileassistant.ui.main.model
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon.Companion.Text
+import androidx.compose.ui.semantics.SemanticsProperties.Text
+import androidx.compose.ui.text.input.KeyboardType.Companion.Text
+import androidx.compose.ui.unit.dp
 import com.example.mobileassistant.domain.model.Task
 import java.time.DayOfWeek
 
@@ -18,5 +27,3 @@ fun buildWeekActivity(tasks: List<Task>): List<WeekStatItem> {
         )
     }
 }
-
-

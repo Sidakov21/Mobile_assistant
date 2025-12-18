@@ -7,6 +7,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.mobileassistant.domain.model.Task
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Entity(
     tableName = "tasks",
@@ -28,12 +29,13 @@ data class TaskEntity(
 
     val title: String,
 
+    val note: String = "",
+
     val isDone: Boolean = false,
 
-    // вычисляемый прогресс (для радара)
     val progress: Int = 0, // 0–100
 
-    val createdAt: LocalDateTime = LocalDateTime.now(),
+    val createdAt: Long = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC),
     val completedAt: LocalDateTime? = null
 )
 
