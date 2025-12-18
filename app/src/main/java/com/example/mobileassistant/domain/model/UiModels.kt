@@ -13,7 +13,8 @@ data class TaskCardUi(
     val note: String,
     val subGoalTitle: String,
     val subGoalColor: Int,
-    val formattedDate: String
+    val formattedDate: String,
+    val subGoalId: Int = 0
 ) {
     companion object {
         fun fromEntity(task: TaskEntity, subGoalTitle: String, subGoalColor: Int): TaskCardUi {

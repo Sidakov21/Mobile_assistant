@@ -42,6 +42,7 @@ data class TaskEntity(
 fun TaskEntity.toDomain() = Task(
     id = taskId,
     title = title,
+    subGoalId = subGoalId,
     progress = progress,
     isDone = isDone,
     completedAt = completedAt

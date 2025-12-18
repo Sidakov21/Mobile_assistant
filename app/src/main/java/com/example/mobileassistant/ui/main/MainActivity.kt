@@ -6,7 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mobileassistant.AppNavigation
-import com.example.mobileassistant.data.repository.FakeGoalRepository
+import com.example.mobileassistant.data.local.DatabaseInitializer
+import com.example.mobileassistant.data.repository.GoalRepositoryImpl
 import com.example.mobileassistant.ui.subgoals.SubGoalsViewModel
 import com.example.mobileassistant.ui.taskdetail.TaskDetailViewModel
 
@@ -15,7 +16,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val repository = FakeGoalRepository()
+        // Инициализируем базу данных
+        val database = DatabaseInitializer.initialize(applicationContext)
+
+        // Создаем репозиторий с реальной базой данных
+        val repository = GoalRepositoryImpl(
+            goalDao = database.goalDao(),
+            subGoalDao = database.subGoalDao(),
+            taskDao = database.taskDao()
+        )
 
         setContent {
             MobileAssistantTheme {
@@ -29,7 +38,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 val taskDetailViewModel: TaskDetailViewModel = viewModel(
-                    factory = TaskDetailViewModelFactory()
+                    factory = TaskDetailViewModelFactory(repository)
                 )
 
                 // Используем навигацию
@@ -68,11 +77,13 @@ class SubGoalsViewModelFactory(
     }
 }
 
-class TaskDetailViewModelFactory : androidx.lifecycle.ViewModelProvider.Factory {
+class TaskDetailViewModelFactory(
+    private val repository: com.example.mobileassistant.domain.model.repository.GoalRepository? = null
+) : androidx.lifecycle.ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TaskDetailViewModel::class.java)) {
-            return TaskDetailViewModel() as T
+            return TaskDetailViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -1,6 +1,9 @@
 package com.example.mobileassistant
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -14,7 +17,9 @@ import com.example.mobileassistant.ui.taskdetail.TaskDetailViewModel
 // Определяем маршруты навигации
 sealed class Screen(val route: String) {
     object Main : Screen("main")
-    object SubGoals : Screen("subgoals")
+    object SubGoals : Screen("subgoals/{goalId}") {
+        fun createRoute(goalId: Int) = "subgoals/$goalId"
+    }
     object TaskDetail : Screen("taskdetail/{taskId}") {
         fun createRoute(taskId: Int) = "taskdetail/$taskId"
     }
@@ -27,6 +32,7 @@ fun AppNavigation(
     taskDetailViewModel: TaskDetailViewModel
 ) {
     val navController = rememberNavController()
+    val mainState by mainViewModel.state.collectAsState()
 
     NavHost(
         navController = navController,
@@ -37,7 +43,9 @@ fun AppNavigation(
             MainScreen(
                 viewModel = mainViewModel,
                 onNavigateToSubGoals = {
-                    navController.navigate(Screen.SubGoals.route)
+                    mainState.selectedGoal?.let { goal ->
+                        navController.navigate(Screen.SubGoals.createRoute(goal.id))
+                    }
                 },
                 onNavigateToTaskDetail = { taskId ->
                     navController.navigate(Screen.TaskDetail.createRoute(taskId))
@@ -46,7 +54,13 @@ fun AppNavigation(
         }
 
         // Экран подцелей
-        composable(Screen.SubGoals.route) {
+        composable(Screen.SubGoals.route) { backStackEntry ->
+            val goalId = backStackEntry.arguments?.getString("goalId")?.toIntOrNull() ?: 1
+
+            LaunchedEffect(goalId) {
+                subGoalsViewModel.loadGoalData(goalId)
+            }
+
             SubGoalsScreen(
                 viewModel = subGoalsViewModel,
                 onNavigateBack = {
@@ -61,6 +75,20 @@ fun AppNavigation(
         // Экран деталей задачи
         composable(Screen.TaskDetail.route) { backStackEntry ->
             val taskId = backStackEntry.arguments?.getString("taskId")?.toIntOrNull()
+
+            LaunchedEffect(taskId) {
+                if (taskId != null) {
+                    taskDetailViewModel.loadTask(taskId)
+                }
+            }
+
+            val taskState by taskDetailViewModel.state.collectAsState()
+
+            LaunchedEffect(taskState.shouldClose) {
+                if (taskState.shouldClose) {
+                    navController.popBackStack()
+                }
+            }
 
             if (taskId != null) {
                 TaskDetailScreen(

@@ -1,59 +1,50 @@
 package com.example.mobileassistant.data.local.dao
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import com.example.mobileassistant.data.local.entity.TaskEntity
-import com.example.mobileassistant.data.local.entity.TaskWithSubGoal
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
 
-    @Query("SELECT * FROM tasks WHERE subGoalId IN (:subGoalIds)")
-    suspend fun getTasksBySubGoals(subGoalIds: List<Int>): List<TaskEntity>
+    // Получить задачи по подцели
+    @Query("SELECT * FROM tasks WHERE subGoalId = :subGoalId ORDER BY createdAt DESC")
+    fun observeTasksBySubGoal(subGoalId: Int): Flow<List<TaskEntity>>
 
-    @Insert
-    suspend fun insertTask(task: TaskEntity)
-
-    @Update
-    suspend fun updateTask(task: TaskEntity)
-
+    // Получить задачи по цели (через подцели)
     @Query("""
-    SELECT tasks.* FROM tasks
-    INNER JOIN sub_goals ON tasks.subGoalId = sub_goals.subGoalId
-    WHERE sub_goals.goalId = :goalId
-""")
+        SELECT tasks.* FROM tasks
+        INNER JOIN sub_goals ON tasks.subGoalId = sub_goals.subGoalId
+        WHERE sub_goals.goalId = :goalId
+        ORDER BY tasks.createdAt DESC
+    """)
     fun observeTasksByGoal(goalId: Int): Flow<List<TaskEntity>>
 
-    // Получить задачи для конкретной подцели
+    // Получить все задачи
+    @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
+    fun observeAllTasks(): Flow<List<TaskEntity>>
+
+    // Получить задачу по ID
+    @Query("SELECT * FROM tasks WHERE taskId = :taskId")
+    suspend fun getTaskById(taskId: Int): TaskEntity?
+
+    // Получить задачи по ID подцели
     @Query("SELECT * FROM tasks WHERE subGoalId = :subGoalId ORDER BY createdAt DESC")
     suspend fun getTasksBySubGoal(subGoalId: Int): List<TaskEntity>
 
-    // Получить задачи с информацией о подцели
-    @Query("""
-        SELECT t.*, sg.title as subGoalTitle, sg.color as subGoalColor
-        FROM tasks t
-        INNER JOIN sub_goals sg ON t.subGoalId = sg.subGoalId
-        WHERE t.subGoalId = :subGoalId
-        ORDER BY t.createdAt DESC
-    """)
-    suspend fun getTasksWithSubGoal(subGoalId: Int): List<TaskWithSubGoal>
-
-    // Получить прогресс подцели (процент выполненных задач)
+    // Получить прогресс подцели
     @Query("""
         SELECT 
             CASE 
                 WHEN COUNT(*) = 0 THEN 0
                 ELSE (SUM(CASE WHEN isDone THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
-            END as progress
+            END
         FROM tasks 
         WHERE subGoalId = :subGoalId
     """)
     suspend fun getSubGoalProgress(subGoalId: Int): Int
 
-    // Получить количество активных задач за последние 7 дней для подцели
+    // Получить количество выполненных задач за последние 7 дней
     @Query("""
         SELECT COUNT(*) 
         FROM tasks 
@@ -63,4 +54,31 @@ interface TaskDao {
     """)
     suspend fun getWeeklyActivity(subGoalId: Int, sevenDaysAgo: Long): Int
 
+    // Вставить задачу
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTask(task: TaskEntity): Long
+
+    // Обновить задачу
+    @Update
+    suspend fun updateTask(task: TaskEntity)
+
+    // Удалить задачу
+    @Delete
+    suspend fun deleteTask(task: TaskEntity)
+
+    // Отметить задачу как выполненную
+    @Query("UPDATE tasks SET isDone = 1, progress = 100, completedAt = :completedAt WHERE taskId = :taskId")
+    suspend fun completeTask(taskId: Int, completedAt: Long)
+
+    // Обновить прогресс задачи
+    @Query("UPDATE tasks SET progress = :progress WHERE taskId = :taskId")
+    suspend fun updateTaskProgress(taskId: Int, progress: Int)
+
+    // Получить количество задач в подцели
+    @Query("SELECT COUNT(*) FROM tasks WHERE subGoalId = :subGoalId")
+    suspend fun getTaskCount(subGoalId: Int): Int
+
+    // Получить количество выполненных задач в подцели
+    @Query("SELECT COUNT(*) FROM tasks WHERE subGoalId = :subGoalId AND isDone = 1")
+    suspend fun getCompletedTaskCount(subGoalId: Int): Int
 }

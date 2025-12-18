@@ -1,11 +1,13 @@
 package com.example.mobileassistant.domain.model
 
 import com.example.mobileassistant.data.local.entity.SubGoalEntity
+import com.example.mobileassistant.data.local.entity.TaskEntity
 import java.time.LocalDateTime
 
 data class Task(
     val id: Int,
     val title: String,
+    val subGoalId: Int,
     val progress: Int,
     val isDone: Boolean,
     val completedAt: LocalDateTime?,
@@ -65,5 +67,18 @@ fun SubGoalEntity.toUi(progress: Int = 0, taskCount: Int = 0): SubGoalButtonUi {
         color = color,
         progress = progress,
         taskCount = taskCount
+    )
+}
+
+fun Task.toEntity(): TaskEntity {
+    return TaskEntity(
+        taskId = this.id,
+        subGoalId = this.subGoalId,
+        title = this.title,
+        isDone = this.isDone,
+        progress = this.progress,
+        note = this.note,
+        createdAt = this.createdAt,
+        completedAt = this.completedAt
     )
 }

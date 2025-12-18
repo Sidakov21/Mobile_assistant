@@ -109,6 +109,7 @@ class MainScreenViewModel(
                 TaskCardUi(
                     id = task.id,
                     title = task.title,
+                    subGoalId = task.subGoalId,
                     progress = task.progress,
                     note = task.note,
                     subGoalTitle = subGoals.find { it.id == task.id }?.title ?: "",

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CardDefaults
@@ -29,11 +31,12 @@ fun TaskCard(
     Card(
         onClick = onClick,
         modifier = modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
@@ -50,25 +53,21 @@ fun TaskCard(
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
 
                 // Метка подцели
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(task.subGoalColor).copy(alpha = 0.2f),
-                        contentColor = Color(task.subGoalColor)
-                    ),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = task.subGoalTitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
+                Badge(
+                    containerColor = Color(task.subGoalColor),
+                    content = {
+                        Text(
+                            text = "${task.progress}%",
+                            color = Color.White
+                        )
+                    }
+                )
             }
 
             // Заметка (превью)
@@ -86,29 +85,23 @@ fun TaskCard(
                 )
             }
 
-            // Прогресс
-            LinearProgressIndicator(
-                progress = task.progress / 100f,
-                modifier = Modifier.fillMaxWidth(),
-                color = Color(task.subGoalColor)
-            )
-
             // Нижняя строка: дата и прогресс
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Название подцели
                 Text(
-                    text = task.formattedDate,
+                    text = task.subGoalTitle,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    color = Color(task.subGoalColor)
                 )
 
                 Text(
-                    text = "${task.progress}%",
+                    text = task.formattedDate,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(task.subGoalColor)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
         }

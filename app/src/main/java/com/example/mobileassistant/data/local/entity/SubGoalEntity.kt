@@ -28,7 +28,7 @@ data class SubGoalEntity(
     val description: String? = null,
     val color: Int = 0xFF4CAF50.toInt(),
     val isCompleted: Boolean = false,
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: Long
 )
 
 fun SubGoalEntity.toDomain() = SubGoal(

@@ -3,6 +3,7 @@ package com.example.mobileassistant.ui.subgoals
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mobileassistant.domain.model.SubGoalButtonUi
+import com.example.mobileassistant.domain.model.Task
 import com.example.mobileassistant.domain.model.TaskCardUi
 import com.example.mobileassistant.domain.model.repository.GoalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,104 +20,111 @@ class SubGoalsViewModel(
     private val _state = MutableStateFlow(SubGoalsState())
     val state: StateFlow<SubGoalsState> = _state
 
-    private var currentGoalId: Int? = null
+    private var currentGoalId: Int = 1
 
-    init {
-        loadInitialData()
-    }
-
-    fun loadInitialData() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-
-            try {
-                // Загружаем цели пользователя
-                val goals = repository.getGoals(userId = 1)
-                val selectedGoal = goals.firstOrNull()
-
-                if (selectedGoal != null) {
-                    currentGoalId = selectedGoal.id
-                    loadSubGoals(selectedGoal.id)
-                }
-
-                _state.update {
-                    it.copy(
-                        goalTitle = selectedGoal?.title ?: "Цель",
-                        isLoading = false
-                    )
-                }
-            } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message) }
-            }
-        }
+    fun loadGoalData(goalId: Int) {
+        currentGoalId = goalId
+        loadSubGoals(goalId)
     }
 
     private fun loadSubGoals(goalId: Int) {
         viewModelScope.launch {
+            _state.update { currentState ->
+                currentState.copy(isLoading = true)
+            }
+
             try {
                 val (subGoals, tasks) = repository.getGoalFull(goalId)
 
-                // Конвертируем подцели в UI модели
-                val subGoalButtons = subGoals.map { subGoal ->
-                    val subGoalTasks = tasks.filter { task -> task.id == subGoal.id }
-                    val progress = if (subGoalTasks.isEmpty()) {
-                        0
-                    } else {
-                        val completed = subGoalTasks.count { it.isDone }
-                        (completed * 100) / subGoalTasks.size
-                    }
+                // Загружаем данные для подцелей (цвета, прогресс)
+                val subGoalButtons = mutableListOf<SubGoalButtonUi>()
 
-                    SubGoalButtonUi(
-                        id = subGoal.id,
-                        title = subGoal.title,
-                        color = 0xFF4CAF50.toInt(),
-                        progress = progress,
-                        taskCount = subGoalTasks.size
+                for (subGoal in subGoals) {
+                    val progress = calculateSubGoalProgress(subGoal.id, tasks)
+                    val taskCount = tasks.count { it.subGoalId == subGoal.id }
+                    val color = repository.getSubGoalColor(subGoal.id) ?: 0xFF4CAF50.toInt()
+
+                    subGoalButtons.add(
+                        SubGoalButtonUi(
+                            id = subGoal.id,
+                            title = subGoal.title,
+                            color = color,
+                            progress = progress,
+                            taskCount = taskCount
+                        )
                     )
                 }
 
                 // Форматируем задачи для UI
                 val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 val allTasks = tasks.map { task ->
-                    val subGoal = subGoals.find { it.id == task.id }
+                    val subGoal = subGoals.find { it.id == task.subGoalId }
+                    val color = repository.getSubGoalColor(task.subGoalId) ?: 0xFF4CAF50.toInt()
+
                     TaskCardUi(
                         id = task.id,
                         title = task.title,
+                        subGoalId = task.subGoalId,
                         progress = task.progress,
                         note = task.note,
                         subGoalTitle = subGoal?.title ?: "",
-                        subGoalColor = 0xFF4CAF50.toInt(),
+                        subGoalColor = color,
                         formattedDate = dateFormat.format(Date(task.createdAt))
                     )
                 }
 
-                _state.update {
-                    it.copy(
+                // Получаем название цели
+                val goals = repository.getGoals(userId = 1)
+                val goal = goals.find { it.id == goalId }
+                val goalTitle = goal?.title ?: "Цель"
+
+                _state.update { currentState ->
+                    currentState.copy(
+                        goalTitle = goalTitle,
                         subGoals = subGoalButtons,
                         allTasks = allTasks,
                         filteredTasks = allTasks,
-                        selectedSubGoal = null
+                        selectedSubGoal = null,
+                        isLoading = false,
+                        error = null
                     )
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _state.update { currentState ->
+                    currentState.copy(
+                        isLoading = false,
+                        error = e.message
+                    )
+                }
             }
         }
     }
 
+    private fun calculateSubGoalProgress(subGoalId: Int, tasks: List<Task>): Int {
+        val subGoalTasks = tasks.filter { it.subGoalId == subGoalId }
+        if (subGoalTasks.isEmpty()) return 0
+
+        val completedTasks = subGoalTasks.count { it.isDone }
+        return (completedTasks * 100) / subGoalTasks.size
+    }
+
     fun selectSubGoal(subGoalId: Int?) {
-        _state.update { current ->
-            val updatedSubGoals = current.subGoals.map {
+        _state.update { currentState ->
+            val updatedSubGoals = currentState.subGoals.map {
                 it.copy(isSelected = it.id == subGoalId)
             }
 
             val filteredTasks = if (subGoalId == null) {
-                current.allTasks
+                currentState.allTasks
             } else {
-                current.allTasks.filter { it.id == subGoalId }
+                currentState.allTasks.filter { task ->
+                    // Ищем подцель по ID и сравниваем название
+                    val selectedSubGoal = currentState.subGoals.find { it.id == subGoalId }
+                    task.subGoalTitle == selectedSubGoal?.title
+                }
             }
 
-            current.copy(
+            currentState.copy(
                 subGoals = updatedSubGoals,
                 selectedSubGoal = updatedSubGoals.find { it.id == subGoalId },
                 filteredTasks = filteredTasks
@@ -125,69 +133,53 @@ class SubGoalsViewModel(
     }
 
     fun searchTasks(query: String) {
-        _state.update { current ->
+        _state.update { currentState ->
             val filtered = if (query.isEmpty()) {
-                current.allTasks
+                currentState.allTasks
             } else {
-                current.allTasks.filter { task ->
+                currentState.allTasks.filter { task ->
                     task.title.contains(query, ignoreCase = true) ||
                             task.note.contains(query, ignoreCase = true) ||
                             task.subGoalTitle.contains(query, ignoreCase = true)
                 }
             }
 
-            current.copy(
+            currentState.copy(
                 searchQuery = query,
                 filteredTasks = filtered
             )
         }
     }
 
-    // ДИАЛОГИ
     fun showAddTaskDialog() {
-        _state.update { it.copy(showAddTaskDialog = true) }
+        _state.update { currentState ->
+            currentState.copy(showAddTaskDialog = true)
+        }
     }
 
     fun hideAddTaskDialog() {
-        _state.update { it.copy(showAddTaskDialog = false) }
+        _state.update { currentState ->
+            currentState.copy(showAddTaskDialog = false)
+        }
     }
 
-    // СОЗДАНИЕ ЗАДАЧИ
     fun addTask(subGoalId: Int, title: String, note: String) {
         viewModelScope.launch {
             try {
                 repository.addTask(subGoalId, title, note)
-                currentGoalId?.let { loadSubGoals(it) } // Перезагружаем данные
+                loadSubGoals(currentGoalId) // Перезагружаем данные
                 hideAddTaskDialog()
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _state.update { currentState ->
+                    currentState.copy(error = e.message)
+                }
             }
         }
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _state.update { currentState ->
+            currentState.copy(error = null)
+        }
     }
-}
-
-// Обновляем SubGoalsState
-data class SubGoalsState(
-    val goalTitle: String = "",
-    val subGoals: List<SubGoalButtonUi> = emptyList(),
-    val selectedSubGoal: SubGoalButtonUi? = null,
-    val allTasks: List<TaskCardUi> = emptyList(),
-    val filteredTasks: List<TaskCardUi> = emptyList(),
-    val searchQuery: String = "",
-    val sortType: SortType = SortType.DATE_NEWEST,
-    val isLoading: Boolean = false,
-    val showAddTaskDialog: Boolean = false,
-    val error: String? = null
-)
-
-enum class SortType {
-    DATE_NEWEST,
-    DATE_OLDEST,
-    PROGRESS_HIGH,
-    PROGRESS_LOW,
-    ALPHABETICAL
 }

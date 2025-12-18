@@ -38,7 +38,8 @@ class TaskRepositoryImpl(
         subGoalDao.insertSubGoal(SubGoalEntity(
             goalId = goalId,
             title = title,
-            color = color
+            color = color,
+            createdAt = System.currentTimeMillis()
         ))
     }
 
@@ -61,20 +62,24 @@ class TaskRepositoryImpl(
     }
 
     override suspend fun updateTask(task: Task) {
-        taskDao.updateTask(TaskEntity(
-            taskId = task.id,
-            subGoalId = 0, // TODO: нужно получать subGoalId
-            title = task.title,
-            progress = task.progress,
-            isDone = task.isDone,
-            note = task.note,
-            completedAt = task.completedAt
-        ))
+//        taskDao.updateTask(TaskEntity(
+//            taskId = task.id,
+//            subGoalId = 0, // TODO: нужно получать subGoalId
+//            title = task.title,
+//            progress = task.progress,
+//            isDone = task.isDone,
+//            note = task.note,
+//            completedAt = task.completedAt
+//        ))
     }
 
     override suspend fun deleteTask(taskId: Int) {
         // TODO: нужно получить задачу и удалить
-        val task = taskDao.getTasksBySubGoals(listOf()) // заглушка
-        // taskDao.deleteTask(task)
+//        val task = taskDao.getTasksBySubGoals(listOf()) // заглушка
+//        // taskDao.deleteTask(task)
+    }
+
+    override suspend fun getSubGoalColor(subGoalId: Int): Int? {
+        TODO("Not yet implemented")
     }
 }
