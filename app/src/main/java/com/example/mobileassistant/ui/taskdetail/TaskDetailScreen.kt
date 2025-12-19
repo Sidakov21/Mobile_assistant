@@ -1,16 +1,13 @@
 package com.example.mobileassistant.ui.taskdetail
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
@@ -24,7 +21,18 @@ fun TaskDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+
+    // Загружаем задачу при первом открытии экрана
+    LaunchedEffect(taskId) {
+        viewModel.loadTask(taskId)
+    }
+
+    // Сбрасываем состояние при закрытии экрана
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.resetState()
+        }
+    }
 
     // Обработка ошибок
     LaunchedEffect(state.error) {
@@ -45,6 +53,14 @@ fun TaskDetailScreen(
                 actionLabel = "OK"
             )
             viewModel.hideSaveSuccess()
+        }
+    }
+
+    // Автоматический переход назад при удалении
+    LaunchedEffect(state.shouldClose) {
+        if (state.shouldClose) {
+            delay(500) // Даем время показать сообщение
+            onNavigateBack()
         }
     }
 
@@ -140,6 +156,7 @@ fun TaskDetailScreen(
                     onValueChange = viewModel::updateTitle,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Название задачи") },
+                    placeholder = { Text("Введите название задачи") },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.titleMedium
                 )
@@ -157,20 +174,30 @@ fun TaskDetailScreen(
                         value = state.progress.toFloat(),
                         onValueChange = { viewModel.updateProgress(it.toInt()) },
                         valueRange = 0f..100f,
+                        steps = 19, // 5% шаги
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
                 // Поле ввода заметки
-                OutlinedTextField(
-                    value = state.note,
-                    onValueChange = viewModel::updateNote,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    label = { Text("Заметка") },
-                    maxLines = 10
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Заметка",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = state.note,
+                        onValueChange = viewModel::updateNote,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        placeholder = { Text("Добавьте заметку...") },
+                        maxLines = 10
+                    )
+                }
             }
         }
     }

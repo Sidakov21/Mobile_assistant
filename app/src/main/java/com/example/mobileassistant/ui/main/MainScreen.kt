@@ -23,7 +23,7 @@ fun MainScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Показываем ошибки
+    // Обработка ошибок
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(
@@ -34,7 +34,7 @@ fun MainScreen(
         }
     }
 
-    // Показываем успешные сообщения
+    // Успешные сообщения
     LaunchedEffect(state.showSuccessMessage) {
         state.showSuccessMessage?.let { message ->
             snackbarHostState.showSnackbar(
@@ -46,32 +46,6 @@ fun MainScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Мобильный ассистент",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    // Кнопка обновления
-                    IconButton(
-                        onClick = { viewModel.refreshData() },
-                        enabled = !state.isLoading
-                    ) {
-                        Icon(
-                            painter = painterResource(android.R.drawable.ic_menu_rotate),
-                            contentDescription = "Обновить"
-                        )
-                    }
-                }
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
@@ -104,6 +78,15 @@ fun MainScreen(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
+//                // Добавляем заголовок экрана
+//                Text(
+//                    text = "Мобильный ассистент",
+//                    style = MaterialTheme.typography.headlineLarge,
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .padding(horizontal = 16.dp, vertical = 8.dp)
+//                )
+
                 // 1. Радар-диаграмма
                 RadarChart(
                     radarData = state.radarData,

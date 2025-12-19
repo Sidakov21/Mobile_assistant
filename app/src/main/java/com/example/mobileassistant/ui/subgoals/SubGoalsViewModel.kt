@@ -7,8 +7,6 @@ import com.example.mobileassistant.domain.model.repository.GoalRepository
 import com.example.mobileassistant.ui.main.model.DomainMapper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 class SubGoalsViewModel(
     private val repository: GoalRepository
@@ -17,29 +15,24 @@ class SubGoalsViewModel(
     private val _state = MutableStateFlow(SubGoalsState())
     val state: StateFlow<SubGoalsState> = _state.asStateFlow()
 
-    private val refreshTrigger = MutableSharedFlow<Unit>(replay = 0)
     private var currentGoalId: Int = 1
 
     init {
-        setupDataObservers()
+        setupDataObserver()
     }
 
-    private fun setupDataObservers() {
+    private fun setupDataObserver() {
         viewModelScope.launch {
-            merge(refreshTrigger)
-                .collect { loadSubGoals(currentGoalId) }
+            // Слушаем обновления данных
+            repository.dataUpdates.collect {
+                loadSubGoals(currentGoalId)
+            }
         }
     }
 
     fun loadGoalData(goalId: Int) {
         currentGoalId = goalId
-        triggerRefresh()
-    }
-
-    private fun triggerRefresh() {
-        viewModelScope.launch {
-            refreshTrigger.emit(Unit)
-        }
+        loadSubGoals(goalId)
     }
 
     private fun loadSubGoals(goalId: Int) {
@@ -67,7 +60,6 @@ class SubGoalsViewModel(
                 }
 
                 // Создаем UI модели для задач
-                val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 val allTasks = tasks.map { task ->
                     val subGoal = subGoals.find { it.id == task.subGoalId }
                     DomainMapper.task.toUi(
@@ -184,8 +176,8 @@ class SubGoalsViewModel(
 
             try {
                 repository.addTask(subGoalId, title, note)
-                triggerRefresh()
 
+                // Показываем уведомление
                 _state.update {
                     it.copy(
                         isAddingTask = false,
@@ -194,9 +186,10 @@ class SubGoalsViewModel(
                     )
                 }
 
+                // Автоматически скрываем сообщение
                 viewModelScope.launch {
                     kotlinx.coroutines.delay(2000)
-                    _state.update { it.copy(showSuccessMessage = null) }
+                    clearSuccessMessage()
                 }
             } catch (e: Exception) {
                 _state.update {
@@ -218,7 +211,7 @@ class SubGoalsViewModel(
     }
 
     fun refreshData() {
-        triggerRefresh()
+        loadSubGoals(currentGoalId)
     }
 }
 

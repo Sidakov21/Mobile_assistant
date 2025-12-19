@@ -16,24 +16,32 @@ class TaskDetailViewModel(
     val state: StateFlow<TaskDetailState> = _state
 
     private var originalTaskId: Int? = null
+    private var hasLoadedTask: Boolean = false
 
     fun loadTask(taskId: Int) {
+        // Если уже загружали эту задачу, не загружаем снова
+        if (hasLoadedTask && originalTaskId == taskId) {
+            return
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
 
             try {
                 val task = repository.getTask(taskId)
-                task?.let {
+                task?.let { loadedTask ->
                     originalTaskId = taskId
+                    hasLoadedTask = true
                     _state.update {
                         it.copy(
                             taskId = taskId,
-                            title = it.title,
-                            note = it.note,
-                            progress = it.progress,
-                            isDone = it.isDone,
+                            title = loadedTask.title,
+                            note = loadedTask.note ?: "",
+                            progress = loadedTask.progress,
+                            isDone = loadedTask.isDone,
                             isLoading = false,
-                            error = null
+                            error = null,
+                            isModified = false
                         )
                     }
                 } ?: run {
@@ -53,6 +61,13 @@ class TaskDetailViewModel(
                 }
             }
         }
+    }
+
+    // Сбрасываем состояние при закрытии экрана
+    fun resetState() {
+        originalTaskId = null
+        hasLoadedTask = false
+        _state.update { TaskDetailState() }
     }
 
     fun updateTitle(title: String) {
@@ -75,9 +90,11 @@ class TaskDetailViewModel(
                 val currentState = _state.value
                 val taskId = currentState.taskId
 
+                // Получаем текущую задачу
                 val originalTask = repository.getTask(taskId)
 
                 if (originalTask != null) {
+                    // Обновляем задачу
                     val updatedTask = originalTask.copy(
                         title = currentState.title,
                         note = currentState.note,
@@ -100,6 +117,7 @@ class TaskDetailViewModel(
                         )
                     }
 
+                    // Автоматически скрываем сообщение
                     viewModelScope.launch {
                         kotlinx.coroutines.delay(2000)
                         hideSaveSuccess()

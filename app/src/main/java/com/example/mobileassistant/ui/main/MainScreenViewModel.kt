@@ -7,8 +7,6 @@ import com.example.mobileassistant.domain.model.repository.GoalRepository
 import com.example.mobileassistant.ui.main.model.DomainMapper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 class MainScreenViewModel(
     private val repository: GoalRepository
@@ -27,8 +25,9 @@ class MainScreenViewModel(
 
     private fun setupDataObservers() {
         viewModelScope.launch {
+            // Комбинируем observeGoals с обновлениями данных
             repository.observeGoals(userId = 1)
-                .combine(refreshTrigger) { goals, _ -> goals }
+                .combine(repository.dataUpdates) { goals, _ -> goals }
                 .distinctUntilChanged()
                 .collect { goals ->
                     val selectedGoal = goals.firstOrNull()
@@ -41,7 +40,9 @@ class MainScreenViewModel(
                         )
                     }
 
-                    selectedGoal?.let { loadGoalData(it.id) }
+                    if (selectedGoal != null) {
+                        loadGoalData(selectedGoal.id)
+                    }
                 }
         }
     }
@@ -49,8 +50,27 @@ class MainScreenViewModel(
     private fun loadInitialData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            refreshTrigger.emit(Unit)
-            _state.update { it.copy(isLoading = false) }
+            try {
+                // Загружаем цели пользователя
+                val goals = repository.getGoals(userId = 1)
+                val selectedGoal = goals.firstOrNull()
+                currentGoalId = selectedGoal?.id
+
+                _state.update { currentState ->
+                    currentState.copy(
+                        goals = goals,
+                        selectedGoal = selectedGoal
+                    )
+                }
+
+                if (selectedGoal != null) {
+                    loadGoalData(selectedGoal.id)
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message) }
+            } finally {
+                _state.update { it.copy(isLoading = false) }
+            }
         }
     }
 
@@ -78,30 +98,12 @@ class MainScreenViewModel(
                 }
 
                 // Создаем радар-диаграмму
-                val radarData = RadarUi(
-                    points = subGoals.mapIndexed { index, subGoal ->
-                        val progress = subGoalProgresses[subGoal.id] ?: 0
-                        val angle = (360f / subGoals.size) * index
-                        RadarPointUi(
-                            label = subGoal.title,
-                            value = progress,
-                            color = subGoal.color,
-                            angle = angle
-                        )
-                    },
-                    centerText = _state.value.selectedGoal?.title ?: "Цель",
-                    totalProgress = if (subGoalProgresses.isNotEmpty()) {
-                        subGoalProgresses.values.sum() / subGoalProgresses.size
-                    } else {
-                        0
-                    }
-                )
+                val radarData = createRadarData(subGoals, subGoalProgresses)
 
                 // Рассчитываем активность за неделю
                 val weeklyActivity = calculateWeeklyActivity(subGoals, tasks)
 
                 // Форматируем задачи для UI
-                val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 val taskCards = tasks.map { task ->
                     val subGoal = subGoals.find { it.id == task.subGoalId }
                     DomainMapper.task.toUi(
@@ -117,13 +119,51 @@ class MainScreenViewModel(
                         tasks = taskCards,
                         filteredTasks = taskCards,
                         radarData = radarData,
-                        weeklyActivity = weeklyActivity
+                        weeklyActivity = weeklyActivity,
+                        isLoading = false
                     )
                 }
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _state.update {
+                    it.copy(
+                        error = e.message ?: "Ошибка загрузки данных",
+                        isLoading = false
+                    )
+                }
             }
         }
+    }
+
+    private fun createRadarData(
+        subGoals: List<SubGoal>,
+        progresses: Map<Int, Int>
+    ): RadarUi {
+        if (subGoals.isEmpty()) {
+            return RadarUi(emptyList(), "Нет данных", 0)
+        }
+
+        val points = subGoals.mapIndexed { index, subGoal ->
+            val progress = progresses[subGoal.id] ?: 0
+            val angle = (360f / subGoals.size) * index
+            RadarPointUi(
+                label = subGoal.title,
+                value = progress,
+                color = subGoal.color,
+                angle = angle
+            )
+        }
+
+        val totalProgress = if (points.isNotEmpty()) {
+            points.sumOf { it.value } / points.size
+        } else {
+            0
+        }
+
+        return RadarUi(
+            points = points,
+            centerText = _state.value.selectedGoal?.title ?: "Цель",
+            totalProgress = totalProgress
+        )
     }
 
     private fun calculateSubGoalProgress(subGoalId: Int, tasks: List<Task>): Int {
@@ -179,9 +219,8 @@ class MainScreenViewModel(
 
             try {
                 repository.addGoal(userId = 1, title = title, description = description)
-                triggerRefresh()
-                hideAddGoalDialog()
 
+                // Показываем сообщение и закрываем диалог
                 _state.update {
                     it.copy(
                         isCreatingGoal = false,
@@ -189,9 +228,13 @@ class MainScreenViewModel(
                     )
                 }
 
+                // Закрываем диалог и обновляем данные
+                hideAddGoalDialog()
+                loadInitialData()
+
                 viewModelScope.launch {
                     kotlinx.coroutines.delay(2000)
-                    _state.update { it.copy(showSuccessMessage = null) }
+                    clearSuccessMessage()
                 }
             } catch (e: Exception) {
                 _state.update {
@@ -211,9 +254,8 @@ class MainScreenViewModel(
             try {
                 currentGoalId?.let { goalId ->
                     repository.addSubGoal(goalId, title, color)
-                    loadGoalData(goalId)
-                    hideAddSubGoalDialog()
 
+                    // Показываем сообщение и закрываем диалог
                     _state.update {
                         it.copy(
                             isCreatingSubGoal = false,
@@ -221,9 +263,13 @@ class MainScreenViewModel(
                         )
                     }
 
+                    // Закрываем диалог и обновляем данные
+                    hideAddSubGoalDialog()
+                    loadGoalData(goalId)
+
                     viewModelScope.launch {
                         kotlinx.coroutines.delay(2000)
-                        _state.update { it.copy(showSuccessMessage = null) }
+                        clearSuccessMessage()
                     }
                 } ?: run {
                     _state.update {
@@ -252,13 +298,16 @@ class MainScreenViewModel(
         _state.update { it.copy(showSuccessMessage = null) }
     }
 
+    // Метод для принудительного обновления данных
     fun refreshData() {
         viewModelScope.launch {
-            triggerRefresh()
+            _state.update { it.copy(isLoading = true) }
+            loadInitialData()
         }
     }
 }
 
+// Обновляем MainScreenState
 data class MainScreenState(
     val goals: List<Goal> = emptyList(),
     val selectedGoal: Goal? = null,

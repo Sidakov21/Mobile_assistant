@@ -1,8 +1,11 @@
 package com.example.mobileassistant
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -53,9 +56,10 @@ fun AppNavigation(
         // Экран подцелей
         composable(Screen.SubGoals.route) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString("goalId")?.toIntOrNull() ?: 1
+            val currentGoalId by rememberUpdatedState(goalId)
 
-            LaunchedEffect(goalId) {
-                subGoalsViewModel.loadGoalData(goalId)
+            LaunchedEffect(currentGoalId) {
+                subGoalsViewModel.loadGoalData(currentGoalId)
             }
 
             SubGoalsScreen(
@@ -70,10 +74,18 @@ fun AppNavigation(
         // Экран деталей задачи
         composable(Screen.TaskDetail.route) { backStackEntry ->
             val taskId = backStackEntry.arguments?.getString("taskId")?.toIntOrNull()
+            val currentTaskId by rememberUpdatedState(taskId)
 
-            LaunchedEffect(taskId) {
-                if (taskId != null) {
-                    taskDetailViewModel.loadTask(taskId)
+            DisposableEffect(Unit) {
+                onDispose {
+                    // Сбрасываем состояние ViewModel при закрытии экрана
+                    taskDetailViewModel.resetState()
+                }
+            }
+
+            LaunchedEffect(currentTaskId) {
+                if (currentTaskId != null) {
+                    taskDetailViewModel.loadTask(currentTaskId!!)
                 }
             }
 
@@ -85,10 +97,10 @@ fun AppNavigation(
                 }
             }
 
-            if (taskId != null) {
+            if (currentTaskId != null) {
                 TaskDetailScreen(
                     viewModel = taskDetailViewModel,
-                    taskId = taskId,
+                    taskId = currentTaskId!!,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

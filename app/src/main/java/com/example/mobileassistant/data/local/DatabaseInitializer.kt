@@ -254,8 +254,47 @@ object DatabaseInitializer {
                 )
             )
 
+            // В prePopulateDatabase добавляем задачи с недавними датами:
+
+            // Задача, созданная сегодня
+            taskDao.insertTask(
+                TaskEntity(
+                    subGoalId = subGoal1Id,
+                    title = "Новая тренировка",
+                    note = "Тренировка на баланс",
+                    progress = 50,
+                    isDone = false,
+                    createdAt = System.currentTimeMillis() - (2L * 60 * 60 * 1000) // 2 часа назад
+                )
+            )
+
+            // Задача, выполненная сегодня
+            taskDao.insertTask(
+                TaskEntity(
+                    subGoalId = subGoal1Id,
+                    title = "Утренняя разминка",
+                    note = "Выполнено успешно",
+                    progress = 100,
+                    isDone = true,
+                    createdAt = System.currentTimeMillis() - (5L * 60 * 60 * 1000), // 5 часов назад
+                    completedAt = System.currentTimeMillis() - (4L * 60 * 60 * 1000) // 4 часа назад
+                )
+            )
+
+            // Задача с прогрессом 75% (вчера)
+            taskDao.insertTask(
+                TaskEntity(
+                    subGoalId = subGoal2Id,
+                    title = "Силовая тренировка",
+                    note = "Хороший результат",
+                    progress = 75,
+                    isDone = false,
+                    createdAt = System.currentTimeMillis() - (25L * 60 * 60 * 1000) // 25 часов назад
+                )
+            )
+
             db.close()
         }
-        
+
     }
 }
