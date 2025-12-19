@@ -51,6 +51,12 @@ class GoalRepositoryImpl(
         }
     }
 
+    override suspend fun getGoal(goalId: Int): Goal? {
+        return dataUpdateMutex.withLock {
+            goalDao.getGoalById(goalId)?.let { DomainMapper.goal.toDomain(it) }
+        }
+    }
+
     // Получаем полную информацию по цели (подцели + задачи)
     override suspend fun getGoalFull(goalId: Int): Pair<List<SubGoal>, List<Task>> {
         return dataUpdateMutex.withLock {
@@ -184,13 +190,6 @@ class GoalRepositoryImpl(
             }
 
             result
-        }
-    }
-
-    // Дополнительные методы
-    suspend fun getGoal(goalId: Int): Goal? {
-        return dataUpdateMutex.withLock {
-            goalDao.getGoalById(goalId)?.let { DomainMapper.goal.toDomain(it) }
         }
     }
 

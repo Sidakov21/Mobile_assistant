@@ -1,12 +1,19 @@
 package com.example.mobileassistant.ui.taskdetail
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -21,13 +28,14 @@ fun TaskDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scrollState = rememberScrollState()
 
-    // Загружаем задачу при первом открытии экрана
+    // Загружаем задачу
     LaunchedEffect(taskId) {
         viewModel.loadTask(taskId)
     }
 
-    // Сбрасываем состояние при закрытии экрана
+    // Сбрасываем состояние при закрытии
     DisposableEffect(Unit) {
         onDispose {
             viewModel.resetState()
@@ -45,21 +53,10 @@ fun TaskDetailScreen(
         }
     }
 
-    // Успешное сохранение
-    LaunchedEffect(state.showSaveSuccess) {
-        if (state.showSaveSuccess) {
-            snackbarHostState.showSnackbar(
-                message = "Задача сохранена",
-                actionLabel = "OK"
-            )
-            viewModel.hideSaveSuccess()
-        }
-    }
-
-    // Автоматический переход назад при удалении
+    // Автоматическое закрытие при сохранении/удалении
     LaunchedEffect(state.shouldClose) {
         if (state.shouldClose) {
-            delay(500) // Даем время показать сообщение
+            delay(500)
             onNavigateBack()
         }
     }
@@ -94,27 +91,29 @@ fun TaskDetailScreen(
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Button(
+                    // Кнопка удаления
+                    OutlinedButton(
                         onClick = viewModel::deleteTask,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ),
-                        enabled = !state.isDeleting && state.taskId > 0
+                        enabled = !state.isDeleting && state.taskId > 0,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
                     ) {
                         if (state.isDeleting) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError
+                                color = MaterialTheme.colorScheme.error
                             )
                         } else {
                             Text("Удалить")
                         }
                     }
 
+                    // Кнопка сохранения
                     Button(
                         onClick = viewModel::saveTask,
-                        enabled = state.isModified && !state.isSaving,
+                        enabled = (state.isModified || state.isCompleted != state.isDone) && !state.isSaving,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
@@ -147,56 +146,157 @@ fun TaskDetailScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .verticalScroll(scrollState)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Поле ввода названия
-                OutlinedTextField(
-                    value = state.title,
-                    onValueChange = viewModel::updateTitle,
+                // Переключатель завершения задачи
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Название задачи") },
-                    placeholder = { Text("Введите название задачи") },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.titleMedium
-                )
-
-                // Прогресс
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (state.isCompleted) {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    )
                 ) {
-                    Text(
-                        text = "Прогресс: ${state.progress}%",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Slider(
-                        value = state.progress.toFloat(),
-                        onValueChange = { viewModel.updateProgress(it.toInt()) },
-                        valueRange = 0f..100f,
-                        steps = 19, // 5% шаги
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                // Поле ввода заметки
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Заметка",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedTextField(
-                        value = state.note,
-                        onValueChange = viewModel::updateNote,
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
-                        placeholder = { Text("Добавьте заметку...") },
-                        maxLines = 10
-                    )
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Иконка чекбокса
+                        IconButton(
+                            onClick = viewModel::toggleCompleted,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (state.isCompleted) {
+                                    Icons.Default.CheckCircle
+                                } else {
+                                    Icons.Default.RadioButtonUnchecked
+                                },
+                                contentDescription = "Завершить задачу",
+                                tint = if (state.isCompleted) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = if (state.isCompleted) "Задача завершена" else "Отметить как выполненную",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (state.isCompleted) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                            Text(
+                                text = if (state.isCompleted)
+                                    "Нажмите, чтобы вернуть в активные"
+                                else
+                                    "Нажмите, чтобы отметить как выполненную",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+
+                // Основные поля редактирования
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Поле ввода названия
+                        OutlinedTextField(
+                            value = state.title,
+                            onValueChange = viewModel::updateTitle,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Название задачи") },
+                            placeholder = { Text("Введите название задачи") },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.titleMedium.copy(
+                                textDecoration = if (state.isCompleted)
+                                    TextDecoration.LineThrough
+                                else
+                                    TextDecoration.None,
+                                color = if (state.isCompleted)
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            ),
+                            isError = state.title.isBlank()
+                        )
+
+                        // Поле ввода заметки
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Заметка",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            OutlinedTextField(
+                                value = state.note,
+                                onValueChange = viewModel::updateNote,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(150.dp),
+                                placeholder = { Text("Добавьте заметку...") },
+                                maxLines = 10,
+                                textStyle = if (state.isCompleted) {
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        textDecoration = TextDecoration.LineThrough,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                } else {
+                                    MaterialTheme.typography.bodyMedium
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Информация о прогрессе
+                if (state.isCompleted) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "✓ Задача завершена",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Прогресс: 100%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -33,5 +33,5 @@ abstract class AppDatabase : RoomDatabase() {
 
     // TODO: Добавить при необходимости
     // abstract fun noteDao(): NoteDao
-    // abstract fun userDao(): UserDao
+    // abstract fun userDao(): UserDaoA
 }

@@ -101,8 +101,8 @@ dependencies {
     // Material Design
     implementation("com.google.android.material:material:1.11.0")
 
-    // Graphics Path (для 16 KB совместимости)
-    implementation("androidx.graphics:graphics-path:1.1.0-beta01")
+//    // Graphics Path (для 16 KB совместимости)
+//    implementation("androidx.graphics:graphics-path:1.1.0-beta01")
 
     // Tests
     testImplementation("junit:junit:4.13.2")

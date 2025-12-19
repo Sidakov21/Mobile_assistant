@@ -6,31 +6,27 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.mobileassistant.ui.main.MainScreen
-import com.example.mobileassistant.ui.main.MainScreenViewModel
-import com.example.mobileassistant.ui.subgoals.SubGoalsScreen
-import com.example.mobileassistant.ui.subgoals.SubGoalsViewModel
-import com.example.mobileassistant.ui.taskdetail.TaskDetailScreen
-import com.example.mobileassistant.ui.taskdetail.TaskDetailViewModel
 
 sealed class Screen(val route: String) {
     object Main : Screen("main")
     object SubGoals : Screen("subgoals/{goalId}") {
         fun createRoute(goalId: Int) = "subgoals/$goalId"
     }
-    object TaskDetail : Screen("taskdetail/{taskId}") {
-        fun createRoute(taskId: Int) = "taskdetail/$taskId"
+    object TaskDetail : Screen("taskdetail/{taskId}/{goalId}") {
+        fun createRoute(taskId: Int, goalId: Int) = "taskdetail/$taskId/$goalId"
     }
 }
 
 @Composable
 fun AppNavigation(
-    mainViewModel: MainScreenViewModel,
-    subGoalsViewModel: SubGoalsViewModel,
-    taskDetailViewModel: TaskDetailViewModel
+    mainViewModel: com.example.mobileassistant.ui.main.MainScreenViewModel,
+    subGoalsViewModel: com.example.mobileassistant.ui.subgoals.SubGoalsViewModel,
+    taskDetailViewModel: com.example.mobileassistant.ui.taskdetail.TaskDetailViewModel
 ) {
     val navController = rememberNavController()
 
@@ -46,9 +42,6 @@ fun AppNavigation(
                     mainViewModel.state.value.selectedGoal?.let { goal ->
                         navController.navigate(Screen.SubGoals.createRoute(goal.id))
                     }
-                },
-                onNavigateToTaskDetail = { taskId ->
-                    navController.navigate(Screen.TaskDetail.createRoute(taskId))
                 }
             )
         }
@@ -62,11 +55,11 @@ fun AppNavigation(
                 subGoalsViewModel.loadGoalData(currentGoalId)
             }
 
-            SubGoalsScreen(
+            com.example.mobileassistant.ui.subgoals.SubGoalsScreen(
                 viewModel = subGoalsViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToTaskDetail = { taskId ->
-                    navController.navigate(Screen.TaskDetail.createRoute(taskId))
+                    navController.navigate(Screen.TaskDetail.createRoute(taskId, currentGoalId))
                 }
             )
         }
@@ -74,11 +67,11 @@ fun AppNavigation(
         // Экран деталей задачи
         composable(Screen.TaskDetail.route) { backStackEntry ->
             val taskId = backStackEntry.arguments?.getString("taskId")?.toIntOrNull()
+            val goalId = backStackEntry.arguments?.getString("goalId")?.toIntOrNull()
             val currentTaskId by rememberUpdatedState(taskId)
 
             DisposableEffect(Unit) {
                 onDispose {
-                    // Сбрасываем состояние ViewModel при закрытии экрана
                     taskDetailViewModel.resetState()
                 }
             }
@@ -91,19 +84,46 @@ fun AppNavigation(
 
             val taskState by taskDetailViewModel.state.collectAsStateWithLifecycle()
 
+            // При сохранении или удалении возвращаемся на экран подцелей
             LaunchedEffect(taskState.shouldClose) {
-                if (taskState.shouldClose) {
-                    navController.popBackStack()
+                if (taskState.shouldClose && goalId != null) {
+                    // Обновляем главный экран
+                    mainViewModel.refreshData()
+                    // Обновляем экран подцелей
+                    subGoalsViewModel.loadGoalData(goalId)
+                    // Возвращаемся на экран подцелей
+                    navController.navigate(Screen.SubGoals.createRoute(goalId)) {
+                        popUpTo(Screen.SubGoals.createRoute(goalId)) {
+                            inclusive = true
+                        }
+                    }
                 }
             }
 
             if (currentTaskId != null) {
-                TaskDetailScreen(
+                com.example.mobileassistant.ui.taskdetail.TaskDetailScreen(
                     viewModel = taskDetailViewModel,
                     taskId = currentTaskId!!,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = {
+                        if (goalId != null) {
+                            navController.navigate(Screen.SubGoals.createRoute(goalId)) {
+                                popUpTo(Screen.SubGoals.createRoute(goalId)) {
+                                    inclusive = true
+                                }
+                            }
+                        } else {
+                            navController.popBackStack()
+                        }
+                    }
                 )
             }
         }
+    }
+}
+
+// Функция для навигации с очисткой стека
+fun NavController.navigateWithClearStack(route: String) {
+    navigate(route) {
+        popUpTo(0) // Очищаем весь стек навигации
     }
 }

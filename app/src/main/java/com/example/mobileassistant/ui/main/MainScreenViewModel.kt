@@ -195,6 +195,17 @@ class MainScreenViewModel(
         }
     }
 
+    // Добавляем в MainScreenViewModel.kt
+    fun selectGoal(goalId: Int) {
+        viewModelScope.launch {
+            val goal = repository.getGoal(goalId)
+            if (goal != null) {
+                _state.update { it.copy(selectedGoal = goal) }
+                loadGoalData(goalId)
+            }
+        }
+    }
+
     // Диалоги
     fun showAddGoalDialog() {
         _state.update { it.copy(showAddGoalDialog = true) }

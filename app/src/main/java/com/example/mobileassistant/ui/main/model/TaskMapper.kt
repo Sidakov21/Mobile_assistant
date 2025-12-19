@@ -36,6 +36,7 @@ object TaskMapper {
     }
 
     // Domain -> UI
+// Обновляем функцию toUi:
     fun toUi(
         task: Task,
         subGoalTitle: String,
@@ -50,7 +51,9 @@ object TaskMapper {
             subGoalTitle = subGoalTitle,
             subGoalColor = subGoalColor,
             formattedDate = dateFormat.format(Date(task.createdAt)),
-            subGoalId = task.subGoalId
+            subGoalId = task.subGoalId,
+            isCompleted = task.isDone,
+            completedAt = task.completedAt
         )
     }
 
@@ -72,4 +75,6 @@ object TaskMapper {
             subGoalId = entity.subGoalId
         )
     }
+
+
 }

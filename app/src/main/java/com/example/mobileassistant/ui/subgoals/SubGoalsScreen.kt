@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -16,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mobileassistant.domain.model.SubGoalButtonUi
 import com.example.mobileassistant.ui.main.components.AddTaskBottomSheet
 import com.example.mobileassistant.ui.main.components.TaskCard
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +28,32 @@ fun SubGoalsScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Обработка успешных сообщений
+    LaunchedEffect(state.showSuccessMessage) {
+        state.showSuccessMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(message)
+                viewModel.clearSuccessMessage()
+            }
+        }
+    }
+
+    // Обработка ошибок
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            scope.launch {
+                snackbarHostState.showSnackbar(error)
+                viewModel.clearError()
+            }
+        }
+    }
+
+    // Разделяем задачи на активные и завершенные
+    val activeTasks = state.filteredTasks.filter { !it.isCompleted }
+    val completedTasks = state.filteredTasks.filter { it.isCompleted }
 
     Scaffold(
         topBar = {
@@ -45,20 +73,6 @@ fun SubGoalsScreen(
                         )
                     }
                 },
-                actions = {
-                    IconButton(onClick = { viewModel.searchTasks("") }) {
-                        Icon(
-                            painter = painterResource(android.R.drawable.ic_menu_search),
-                            contentDescription = "Поиск"
-                        )
-                    }
-                    IconButton(onClick = { /* TODO: Сортировка */ }) {
-                        Icon(
-                            painter = painterResource(android.R.drawable.ic_menu_sort_by_size),
-                            contentDescription = "Сортировка"
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -73,7 +87,6 @@ fun SubGoalsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // Кнопка 1 - Подцели (текущий экран)
                     Button(
                         onClick = { },
                         modifier = Modifier.weight(1f),
@@ -81,10 +94,9 @@ fun SubGoalsScreen(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("Подцели")
+                        Text("Задачи")
                     }
 
-                    // Кнопка 2 - Статистика (заглушка)
                     Button(
                         onClick = { },
                         modifier = Modifier.weight(1f)
@@ -92,7 +104,6 @@ fun SubGoalsScreen(
                         Text("Статистика")
                     }
 
-                    // Кнопка 3 - Профиль (заглушка)
                     Button(
                         onClick = { },
                         modifier = Modifier.weight(1f)
@@ -112,7 +123,8 @@ fun SubGoalsScreen(
                     contentDescription = "Добавить задачу"
                 )
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         if (state.isLoading) {
             Box(
@@ -127,7 +139,7 @@ fun SubGoalsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Список подцелей (горизонтальный)
+                // Список подцелей (горизонтальный) - ДОБАВЛЯЕМ КОМПОНЕНТ
                 SubGoalsList(
                     subGoals = state.subGoals,
                     selectedSubGoal = state.selectedSubGoal,
@@ -139,31 +151,115 @@ fun SubGoalsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Заголовок для списка задач
-                Text(
-                    text = state.selectedSubGoal?.let { "Задачи: ${it.title}" } ?: "Все задачи",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-
-                // Список задач
-                LazyColumn(
+                // Счетчики задач - ИСПРАВЛЯЕМ ОПЕЧАТКУ (Text(Ы -> Text()
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    items(state.filteredTasks) { task ->
-                        TaskCard(
-                            task = task,
-                            onClick = { onNavigateToTaskDetail(task.id) }
-                        )
-                    }
+                    Text(
+                        text = "Всего задач: ${state.filteredTasks.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "Выполнено: ${completedTasks.size}/${state.filteredTasks.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
 
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Активные задачи
+                if (activeTasks.isNotEmpty()) {
+                    Text(
+                        text = "Активные задачи (${activeTasks.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(activeTasks) { task ->
+                            TaskCard(
+                                task = task,
+                                onClick = { onNavigateToTaskDetail(task.id) }
+                            )
+                        }
                     }
                 }
+
+                // Завершенные задачи
+                if (completedTasks.isNotEmpty()) {
+                    Divider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    Text(
+                        text = "Завершенные задачи (${completedTasks.size})",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(completedTasks) { task ->
+                            TaskCard(
+                                task = task.copy(
+                                    // Визуальное отличие для завершенных задач
+                                    subGoalColor = Color.Gray.toArgb(),
+                                    progress = 100
+                                ),
+                                onClick = { onNavigateToTaskDetail(task.id) }
+                            )
+                        }
+                    }
+                }
+
+                // Если нет задач
+                if (state.filteredTasks.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(android.R.drawable.ic_menu_view),
+                            contentDescription = "Нет задач",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Нет задач",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = "Нажмите на кнопку ниже, чтобы добавить задачу",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
 
@@ -181,6 +277,8 @@ fun SubGoalsScreen(
         }
     }
 }
+
+// ДОБАВЛЯЕМ КОМПОНЕНТ SubGoalsList В КОНЕЦ ФАЙЛА:
 
 @Composable
 fun SubGoalsList(

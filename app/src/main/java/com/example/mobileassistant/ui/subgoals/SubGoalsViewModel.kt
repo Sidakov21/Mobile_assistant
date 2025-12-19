@@ -7,7 +7,6 @@ import com.example.mobileassistant.domain.model.repository.GoalRepository
 import com.example.mobileassistant.ui.main.model.DomainMapper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
 class SubGoalsViewModel(
     private val repository: GoalRepository
 ) : ViewModel() {
@@ -175,6 +174,11 @@ class SubGoalsViewModel(
             _state.update { it.copy(isAddingTask = true) }
 
             try {
+                // Проверяем, что у нас есть подцель
+                if (subGoalId <= 0) {
+                    throw IllegalArgumentException("Не выбрана подцель для задачи")
+                }
+
                 repository.addTask(subGoalId, title, note)
 
                 // Показываем уведомление
@@ -195,7 +199,7 @@ class SubGoalsViewModel(
                 _state.update {
                     it.copy(
                         isAddingTask = false,
-                        error = "Ошибка: ${e.message}"
+                        error = "Ошибка: ${e.message ?: "Не удалось добавить задачу"}"
                     )
                 }
             }

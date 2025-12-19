@@ -19,7 +19,6 @@ class TaskDetailViewModel(
     private var hasLoadedTask: Boolean = false
 
     fun loadTask(taskId: Int) {
-        // Если уже загружали эту задачу, не загружаем снова
         if (hasLoadedTask && originalTaskId == taskId) {
             return
         }
@@ -39,6 +38,7 @@ class TaskDetailViewModel(
                             note = loadedTask.note ?: "",
                             progress = loadedTask.progress,
                             isDone = loadedTask.isDone,
+                            isCompleted = loadedTask.isDone,  // Добавляем для UI
                             isLoading = false,
                             error = null,
                             isModified = false
@@ -78,10 +78,21 @@ class TaskDetailViewModel(
         _state.update { it.copy(note = note, isModified = true) }
     }
 
-    fun updateProgress(progress: Int) {
-        _state.update { it.copy(progress = progress, isModified = true) }
+    // Переключаем состояние завершения задачи
+    fun toggleCompleted() {
+        _state.update { currentState ->
+            val newIsDone = !currentState.isDone
+            val newProgress = if (newIsDone) 100 else 0
+            currentState.copy(
+                isDone = newIsDone,
+                isCompleted = newIsDone,
+                progress = newProgress,
+                isModified = true
+            )
+        }
     }
 
+    // Сохраняем задачу
     fun saveTask() {
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
@@ -90,18 +101,18 @@ class TaskDetailViewModel(
                 val currentState = _state.value
                 val taskId = currentState.taskId
 
-                // Получаем текущую задачу
                 val originalTask = repository.getTask(taskId)
 
                 if (originalTask != null) {
-                    // Обновляем задачу
                     val updatedTask = originalTask.copy(
                         title = currentState.title,
                         note = currentState.note,
                         progress = currentState.progress,
-                        isDone = currentState.progress == 100,
-                        completedAt = if (currentState.progress == 100 && !originalTask.isDone) {
+                        isDone = currentState.isDone,
+                        completedAt = if (currentState.isDone && !originalTask.isDone) {
                             System.currentTimeMillis()
+                        } else if (!currentState.isDone) {
+                            null
                         } else {
                             originalTask.completedAt
                         }
@@ -113,14 +124,8 @@ class TaskDetailViewModel(
                         it.copy(
                             isSaving = false,
                             isModified = false,
-                            showSaveSuccess = true
+                            shouldClose = true  // Закрываем экран
                         )
-                    }
-
-                    // Автоматически скрываем сообщение
-                    viewModelScope.launch {
-                        kotlinx.coroutines.delay(2000)
-                        hideSaveSuccess()
                     }
                 } else {
                     _state.update {
@@ -152,7 +157,7 @@ class TaskDetailViewModel(
                 _state.update {
                     it.copy(
                         isDeleting = false,
-                        shouldClose = true
+                        shouldClose = true  // Закрываем экран
                     )
                 }
             } catch (e: Exception) {
@@ -169,10 +174,6 @@ class TaskDetailViewModel(
     fun clearError() {
         _state.update { it.copy(error = null) }
     }
-
-    fun hideSaveSuccess() {
-        _state.update { it.copy(showSaveSuccess = false) }
-    }
 }
 
 data class TaskDetailState(
@@ -181,11 +182,11 @@ data class TaskDetailState(
     val note: String = "",
     val progress: Int = 0,
     val isDone: Boolean = false,
+    val isCompleted: Boolean = false,  // Для UI состояния
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
     val isModified: Boolean = false,
     val error: String? = null,
-    val showSaveSuccess: Boolean = false,
-    val shouldClose: Boolean = false
+    val shouldClose: Boolean = false  // Для закрытия экрана
 )

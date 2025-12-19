@@ -1,6 +1,7 @@
 package com.example.mobileassistant.data.local.dao
 
 import androidx.room.*
+import com.example.mobileassistant.data.local.entity.GoalEntity
 import com.example.mobileassistant.data.local.entity.SubGoalEntity
 import com.example.mobileassistant.data.local.entity.SubGoalWithTasks
 import kotlinx.coroutines.flow.Flow
@@ -43,4 +44,7 @@ interface SubGoalDao {
     // Получить цвет подцели
     @Query("SELECT color FROM sub_goals WHERE subGoalId = :subGoalId")
     suspend fun getSubGoalColor(subGoalId: Int): Int?
+
+    @Query("SELECT * FROM goals WHERE goalId = :goalId")
+    suspend fun getGoalById(goalId: Int): GoalEntity?
 }
