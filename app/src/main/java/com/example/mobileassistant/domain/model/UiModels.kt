@@ -16,7 +16,8 @@ data class TaskCardUi(
     val formattedDate: String,
     val subGoalId: Int = 0,
     val isCompleted: Boolean = false,
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val createdAt: Long = System.currentTimeMillis()
 ) {
     companion object {
         fun fromEntity(task: TaskEntity, subGoalTitle: String, subGoalColor: Int): TaskCardUi {
@@ -33,7 +34,8 @@ data class TaskCardUi(
                 formattedDate = date,
                 subGoalId = task.subGoalId,
                 isCompleted = task.isDone,  // Используем isDone из Entity
-                completedAt = task.completedAt
+                completedAt = task.completedAt,
+                createdAt = task.createdAt
             )
         }
     }

@@ -5,15 +5,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.mobileassistant.ui.main.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,8 +27,10 @@ fun MainScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showGoalsMenu by remember { mutableStateOf(false) }
+    var showGoalContextMenu by remember { mutableStateOf(false) }
+    var selectedGoalForContext by remember { mutableStateOf<com.example.mobileassistant.domain.model.Goal?>(null) }
 
-    // Обработка ошибок
+    // Обработка сообщений
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(
@@ -38,7 +41,6 @@ fun MainScreen(
         }
     }
 
-    // Успешные сообщения
     LaunchedEffect(state.showSuccessMessage) {
         state.showSuccessMessage?.let { message ->
             snackbarHostState.showSnackbar(
@@ -62,7 +64,6 @@ fun MainScreen(
                     )
                 },
                 actions = {
-                    // Меню выбора цели
                     IconButton(onClick = { showGoalsMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
@@ -70,7 +71,6 @@ fun MainScreen(
                         )
                     }
 
-                    // Выпадающее меню с целями
                     DropdownMenu(
                         expanded = showGoalsMenu,
                         onDismissRequest = { showGoalsMenu = false }
@@ -125,7 +125,7 @@ fun MainScreen(
                     .padding(paddingValues),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Показываем текущую выбранную цель
+                // Текущая цель
                 item {
                     Card(
                         modifier = Modifier
@@ -177,7 +177,6 @@ fun MainScreen(
                                     }
                                 }
 
-                                // Кнопка перехода к подцелям
                                 FilledTonalButton(
                                     onClick = {
                                         state.selectedGoal?.let { goal ->
@@ -193,7 +192,7 @@ fun MainScreen(
                     }
                 }
 
-                // Радар-диаграмма (только если есть подцели)
+                // Радар-диаграмма
                 if (state.subGoals.isNotEmpty()) {
                     item {
                         RadarChart(
@@ -240,6 +239,10 @@ fun MainScreen(
                             isSelected = state.selectedGoal?.id == goal.id,
                             onSelect = { viewModel.selectGoal(goal.id) },
                             onNavigate = { onNavigateToSubGoals(goal.id) },
+                            onLongPress = {
+                                selectedGoalForContext = goal
+                                showGoalContextMenu = true
+                            },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -249,6 +252,27 @@ fun MainScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
+        }
+
+        // Диалог контекстного меню для цели
+        if (showGoalContextMenu && selectedGoalForContext != null) {
+            GoalContextMenuDialog(
+                goal = selectedGoalForContext!!,
+                onComplete = {
+                    viewModel.markGoalAsCompleted(selectedGoalForContext!!.id)
+                    showGoalContextMenu = false
+                    selectedGoalForContext = null
+                },
+                onDelete = {
+                    viewModel.deleteGoal(selectedGoalForContext!!.id)
+                    showGoalContextMenu = false
+                    selectedGoalForContext = null
+                },
+                onDismiss = {
+                    showGoalContextMenu = false
+                    selectedGoalForContext = null
+                }
+            )
         }
 
         // Диалог добавления цели
@@ -281,6 +305,7 @@ fun GoalCard(
     isSelected: Boolean,
     onSelect: () -> Unit,
     onNavigate: () -> Unit,
+    onLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -298,7 +323,7 @@ fun GoalCard(
             CardDefaults.outlinedCardBorder()
         } else {
             null
-        }
+        },
     ) {
         Column(
             modifier = Modifier
@@ -352,7 +377,6 @@ fun GoalCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка выбора
                 TextButton(
                     onClick = onSelect,
                     modifier = Modifier.padding(end = 8.dp)
@@ -360,11 +384,91 @@ fun GoalCard(
                     Text("Выбрать")
                 }
 
-                // Кнопка перехода к подцелям
                 Button(
                     onClick = onNavigate
                 ) {
                     Text("Подцели")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GoalContextMenuDialog(
+    goal: com.example.mobileassistant.domain.model.Goal,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Цель: ${goal.title}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = "Что вы хотите сделать с этой целью?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Кнопка "Отметить выполненной"
+                Button(
+                    onClick = onComplete,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Завершить",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Отметить выполненной")
+                }
+
+                // Кнопка "Удалить"
+                Button(
+                    onClick = onDelete,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Удалить",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Удалить цель")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Кнопка "Отмена"
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Отмена")
                 }
             }
         }

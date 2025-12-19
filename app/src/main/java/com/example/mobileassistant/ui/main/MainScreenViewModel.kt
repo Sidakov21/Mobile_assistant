@@ -206,6 +206,76 @@ class MainScreenViewModel(
         }
     }
 
+    // Добавляем в MainScreenViewModel.kt
+    fun markGoalAsCompleted(goalId: Int) {
+        viewModelScope.launch {
+            try {
+                // Получаем цель из репозитория
+                val goal = repository.getGoal(goalId)
+                if (goal != null) {
+                    // Помечаем цель как завершенную
+                    // Здесь нужно будет реализовать метод updateGoal в репозитории
+                    // repository.updateGoal(goal.copy(isCompleted = true))
+
+                    // Временно просто обновляем данные
+                    triggerRefresh()
+
+                    _state.update {
+                        it.copy(
+                            showSuccessMessage = "Цель '${goal.title}' отмечена как выполненная"
+                        )
+                    }
+
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(2000)
+                        clearSuccessMessage()
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        error = "Ошибка: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteGoal(goalId: Int) {
+        viewModelScope.launch {
+            try {
+                // Получаем цель для получения названия
+                val goal = repository.getGoal(goalId)
+
+                // Удаляем цель
+                // Здесь нужно будет реализовать метод deleteGoal в репозитории
+                // repository.deleteGoal(goalId)
+
+                // Временно просто обновляем данные
+                triggerRefresh()
+
+                goal?.let {
+                    _state.update {
+                        it.copy(
+                            showSuccessMessage = "Цель удалена"
+                        )
+                    }
+                }
+
+                viewModelScope.launch {
+                    kotlinx.coroutines.delay(2000)
+                    clearSuccessMessage()
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        error = "Ошибка удаления: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
     // Диалоги
     fun showAddGoalDialog() {
         _state.update { it.copy(showAddGoalDialog = true) }

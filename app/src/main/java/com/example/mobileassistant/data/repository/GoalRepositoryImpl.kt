@@ -120,6 +120,36 @@ class GoalRepositoryImpl(
         }
     }
 
+    // Добавляем в GoalRepositoryImpl.kt
+    override suspend fun updateGoal(goal: Goal) {
+        dataUpdateMutex.withLock {
+            val goalEntity = DomainMapper.goal.toEntity(goal, userId = 1) // Нужно получить userId
+            goalDao.updateGoal(goalEntity)
+            notifyDataUpdate()
+        }
+    }
+
+    override suspend fun deleteGoal(goalId: Int) {
+        dataUpdateMutex.withLock {
+            val goal = goalDao.getGoalById(goalId)
+            goal?.let {
+                goalDao.deleteGoal(it)
+                notifyDataUpdate()
+            }
+        }
+    }
+
+    override suspend fun markGoalAsCompleted(goalId: Int) {
+        dataUpdateMutex.withLock {
+            val goal = goalDao.getGoalById(goalId)
+            goal?.let {
+                val updatedGoal = it.copy(isCompleted = true)
+                goalDao.updateGoal(updatedGoal)
+                notifyDataUpdate()
+            }
+        }
+    }
+
     // Обновляем задачу
     override suspend fun updateTask(task: Task) {
         dataUpdateMutex.withLock {

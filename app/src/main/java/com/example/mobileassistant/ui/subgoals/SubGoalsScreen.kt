@@ -4,14 +4,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mobileassistant.domain.model.SubGoalButtonUi
@@ -30,8 +37,9 @@ fun SubGoalsScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
 
-    // Обработка успешных сообщений
+    // Обработка сообщений
     LaunchedEffect(state.showSuccessMessage) {
         state.showSuccessMessage?.let { message ->
             scope.launch {
@@ -41,7 +49,6 @@ fun SubGoalsScreen(
         }
     }
 
-    // Обработка ошибок
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             scope.launch {
@@ -51,7 +58,7 @@ fun SubGoalsScreen(
         }
     }
 
-    // Разделяем задачи на активные и завершенные
+    // Разделяем задачи
     val activeTasks = state.filteredTasks.filter { !it.isCompleted }
     val completedTasks = state.filteredTasks.filter { it.isCompleted }
 
@@ -59,18 +66,45 @@ fun SubGoalsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = state.goalTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            painter = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
-                            contentDescription = "Назад"
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Три точки (меню)
+                        IconButton(
+                            onClick = {
+                                // Можно добавить меню настроек или фильтров
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Меню",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+
+                        // Название цели
+                        Text(
+                            text = state.goalTitle,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
+
+                        // Кнопка назад
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Назад",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -79,47 +113,14 @@ fun SubGoalsScreen(
                 )
             )
         },
-        bottomBar = {
-            BottomAppBar(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = { },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text("Задачи")
-                    }
-
-                    Button(
-                        onClick = { },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Статистика")
-                    }
-
-                    Button(
-                        onClick = { },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Профиль")
-                    }
-                }
-            }
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.showAddTaskDialog() },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(
-                    painter = painterResource(android.R.drawable.ic_input_add),
+                    imageVector = Icons.Default.Add,
                     contentDescription = "Добавить задачу"
                 )
             }
@@ -139,7 +140,79 @@ fun SubGoalsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Список подцелей (горизонтальный) - ДОБАВЛЯЕМ КОМПОНЕНТ
+                // Поле поиска
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = { viewModel.searchTasks(it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    label = { Text("Поиск задач") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Поиск"
+                        )
+                    },
+                    trailingIcon = {
+                        if (state.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.searchTasks("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Очистить поиск"
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        keyboardType = KeyboardType.Text
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                        }
+                    )
+                )
+
+                // Панель сортировки
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Сортировка:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+
+                    FilterChip(
+                        selected = state.sortType == SortType.DATE_NEWEST,
+                        onClick = { viewModel.setSortType(SortType.DATE_NEWEST) },
+                        label = { Text("Новые") },
+                        leadingIcon = if (state.sortType == SortType.DATE_NEWEST) {
+                            { Icon(Icons.Default.Check, contentDescription = null) }
+                        } else null
+                    )
+
+                    FilterChip(
+                        selected = state.sortType == SortType.PROGRESS_HIGH,
+                        onClick = { viewModel.setSortType(SortType.PROGRESS_HIGH) },
+                        label = { Text("Прогресс") }
+                    )
+
+                    FilterChip(
+                        selected = state.sortType == SortType.ALPHABETICAL,
+                        onClick = { viewModel.setSortType(SortType.ALPHABETICAL) },
+                        label = { Text("А-Я") }
+                    )
+                }
+
+                // Список подцелей
                 SubGoalsList(
                     subGoals = state.subGoals,
                     selectedSubGoal = state.selectedSubGoal,
@@ -151,7 +224,7 @@ fun SubGoalsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Счетчики задач - ИСПРАВЛЯЕМ ОПЕЧАТКУ (Text(Ы -> Text()
+                // Счетчики задач
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -164,7 +237,7 @@ fun SubGoalsScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Text(
-                        text = "Выполнено: ${completedTasks.size}/${state.filteredTasks.size}",
+                        text = "Выполнено: ${completedTasks.size}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -219,11 +292,7 @@ fun SubGoalsScreen(
                     ) {
                         items(completedTasks) { task ->
                             TaskCard(
-                                task = task.copy(
-                                    // Визуальное отличие для завершенных задач
-                                    subGoalColor = Color.Gray.toArgb(),
-                                    progress = 100
-                                ),
+                                task = task,
                                 onClick = { onNavigateToTaskDetail(task.id) }
                             )
                         }
@@ -240,7 +309,7 @@ fun SubGoalsScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            painter = painterResource(android.R.drawable.ic_menu_view),
+                            imageVector = Icons.Default.TaskAlt,
                             contentDescription = "Нет задач",
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
@@ -251,11 +320,19 @@ fun SubGoalsScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
-                        Text(
-                            text = "Нажмите на кнопку ниже, чтобы добавить задачу",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
+                        if (state.searchQuery.isNotEmpty()) {
+                            Text(
+                                text = "Попробуйте изменить поисковый запрос",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                        } else {
+                            Text(
+                                text = "Нажмите на кнопку +, чтобы добавить задачу",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                        }
                     }
                 }
 
@@ -277,6 +354,7 @@ fun SubGoalsScreen(
         }
     }
 }
+
 
 // ДОБАВЛЯЕМ КОМПОНЕНТ SubGoalsList В КОНЕЦ ФАЙЛА:
 

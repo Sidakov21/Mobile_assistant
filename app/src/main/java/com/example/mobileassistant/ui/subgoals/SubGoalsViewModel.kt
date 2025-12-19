@@ -7,6 +7,7 @@ import com.example.mobileassistant.domain.model.repository.GoalRepository
 import com.example.mobileassistant.ui.main.model.DomainMapper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
 class SubGoalsViewModel(
     private val repository: GoalRepository
 ) : ViewModel() {
@@ -22,7 +23,6 @@ class SubGoalsViewModel(
 
     private fun setupDataObserver() {
         viewModelScope.launch {
-            // Слушаем обновления данных
             repository.dataUpdates.collect {
                 loadSubGoals(currentGoalId)
             }
@@ -41,12 +41,10 @@ class SubGoalsViewModel(
             try {
                 val (subGoals, tasks) = repository.getGoalFull(goalId)
 
-                // Получаем название цели
                 val goals = repository.getGoals(userId = 1)
                 val goal = goals.find { it.id == goalId }
                 val goalTitle = goal?.title ?: "Цель"
 
-                // Создаем UI модели для подцелей
                 val subGoalButtons = subGoals.map { subGoal ->
                     val subGoalTasks = tasks.filter { it.subGoalId == subGoal.id }
                     val progress = calculateSubGoalProgress(subGoal.id, tasks)
@@ -58,7 +56,6 @@ class SubGoalsViewModel(
                     )
                 }
 
-                // Создаем UI модели для задач
                 val allTasks = tasks.map { task ->
                     val subGoal = subGoals.find { it.id == task.subGoalId }
                     DomainMapper.task.toUi(
@@ -68,11 +65,12 @@ class SubGoalsViewModel(
                     )
                 }
 
-                // Применяем текущий фильтр
-                val filteredTasks = applyFilter(
+                // Используем applyFilterAndSort вместо applyFilter
+                val filteredTasks = applyFilterAndSort(
                     allTasks = allTasks,
                     selectedSubGoalId = _state.value.selectedSubGoal?.id,
-                    searchQuery = _state.value.searchQuery
+                    searchQuery = _state.value.searchQuery,
+                    sortType = _state.value.sortType
                 )
 
                 _state.update {
@@ -96,17 +94,20 @@ class SubGoalsViewModel(
         }
     }
 
-    private fun applyFilter(
+    private fun applyFilterAndSort(
         allTasks: List<com.example.mobileassistant.domain.model.TaskCardUi>,
         selectedSubGoalId: Int?,
-        searchQuery: String
+        searchQuery: String,
+        sortType: SortType
     ): List<com.example.mobileassistant.domain.model.TaskCardUi> {
         var filtered = allTasks
 
+        // Фильтр по подцели
         if (selectedSubGoalId != null) {
             filtered = filtered.filter { it.subGoalId == selectedSubGoalId }
         }
 
+        // Фильтр по поиску
         if (searchQuery.isNotEmpty()) {
             filtered = filtered.filter { task ->
                 task.title.contains(searchQuery, ignoreCase = true) ||
@@ -115,7 +116,14 @@ class SubGoalsViewModel(
             }
         }
 
-        return filtered
+        // Сортировка
+        return when (sortType) {
+            SortType.DATE_NEWEST -> filtered.sortedByDescending { it.createdAt }
+            SortType.DATE_OLDEST -> filtered.sortedBy { it.createdAt }
+            SortType.PROGRESS_HIGH -> filtered.sortedByDescending { it.progress }
+            SortType.PROGRESS_LOW -> filtered.sortedBy { it.progress }
+            SortType.ALPHABETICAL -> filtered.sortedBy { it.title }
+        }
     }
 
     private fun calculateSubGoalProgress(subGoalId: Int, tasks: List<Task>): Int {
@@ -132,10 +140,11 @@ class SubGoalsViewModel(
                 it.copy(isSelected = it.id == subGoalId)
             }
 
-            val filteredTasks = applyFilter(
+            val filteredTasks = applyFilterAndSort(
                 allTasks = current.allTasks,
                 selectedSubGoalId = subGoalId,
-                searchQuery = current.searchQuery
+                searchQuery = current.searchQuery,
+                sortType = current.sortType
             )
 
             current.copy(
@@ -148,14 +157,31 @@ class SubGoalsViewModel(
 
     fun searchTasks(query: String) {
         _state.update { current ->
-            val filtered = applyFilter(
+            val filtered = applyFilterAndSort(
                 allTasks = current.allTasks,
                 selectedSubGoalId = current.selectedSubGoal?.id,
-                searchQuery = query
+                searchQuery = query,
+                sortType = current.sortType
             )
 
             current.copy(
                 searchQuery = query,
+                filteredTasks = filtered
+            )
+        }
+    }
+
+    fun setSortType(sortType: SortType) {
+        _state.update { current ->
+            val filtered = applyFilterAndSort(
+                allTasks = current.allTasks,
+                selectedSubGoalId = current.selectedSubGoal?.id,
+                searchQuery = current.searchQuery,
+                sortType = sortType
+            )
+
+            current.copy(
+                sortType = sortType,
                 filteredTasks = filtered
             )
         }
@@ -174,14 +200,12 @@ class SubGoalsViewModel(
             _state.update { it.copy(isAddingTask = true) }
 
             try {
-                // Проверяем, что у нас есть подцель
                 if (subGoalId <= 0) {
                     throw IllegalArgumentException("Не выбрана подцель для задачи")
                 }
 
                 repository.addTask(subGoalId, title, note)
 
-                // Показываем уведомление
                 _state.update {
                     it.copy(
                         isAddingTask = false,
@@ -190,7 +214,6 @@ class SubGoalsViewModel(
                     )
                 }
 
-                // Автоматически скрываем сообщение
                 viewModelScope.launch {
                     kotlinx.coroutines.delay(2000)
                     clearSuccessMessage()

@@ -53,7 +53,8 @@ object TaskMapper {
             formattedDate = dateFormat.format(Date(task.createdAt)),
             subGoalId = task.subGoalId,
             isCompleted = task.isDone,
-            completedAt = task.completedAt
+            completedAt = task.completedAt,
+            createdAt = task.createdAt
         )
     }
 
@@ -72,7 +73,8 @@ object TaskMapper {
             subGoalTitle = subGoalTitle,
             subGoalColor = subGoalColor,
             formattedDate = dateFormat.format(Date(entity.createdAt)),
-            subGoalId = entity.subGoalId
+            subGoalId = entity.subGoalId,
+            createdAt = entity.createdAt
         )
     }
 
